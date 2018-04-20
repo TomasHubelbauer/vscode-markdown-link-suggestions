@@ -1,5 +1,6 @@
 'use strict';
 
+import MarkDownDOM from 'markdown-dom';
 import { ExtensionContext, languages, TextDocument, Position, CancellationToken, CompletionContext, CompletionItem, CompletionItemProvider, Range, workspace, Uri, CompletionItemKind } from 'vscode';
 
 export function activate(context: ExtensionContext) {
@@ -21,7 +22,7 @@ class LinkProvider implements CompletionItemProvider {
             return;
         }
 
-        const files = await workspace.findFiles('**/*.*');
+        const files = await workspace.findFiles('**/*.*', undefined); // Exclude default exclusions using `undefined`
         const items: CompletionItem[] = [];
         for (const file of files) {
             if (file.scheme !== 'file') {
@@ -35,12 +36,7 @@ class LinkProvider implements CompletionItemProvider {
                 const textDocument = await workspace.openTextDocument(file);
                 const lines = textDocument.getText().split(/\r|\n/).filter(line => line.trim().startsWith('#'));
                 for (const line of lines) {
-                    let header = line.substring(line.indexOf('# ') + '# '.length);
-    
-                    // Remove link.
-                    if (header.startsWith('[')) {
-                        header = header.substring('['.length, header.indexOf(']'));
-                    }
+                    const header = this.strip(line);
     
                     const anchor = header.toLowerCase().replace(/\s/g, '-');
                     items.push({ label: label + ' ' + header, insertText: label + '#' + anchor, kind: CompletionItemKind.Reference });
@@ -49,6 +45,30 @@ class LinkProvider implements CompletionItemProvider {
         }
 
         return items;
+    }
+
+    strip(line: string) {
+        try {
+            const dom = MarkDownDOM.parse(line);
+            let header = '';
+            // TODO: Fix weird types
+            for (const span of (dom as any).blocks[0].spans) {
+                if (span.type === 'run') {
+                    header += span.text;
+                }
+            }
+            
+            return header.trim();
+        } catch (error) {
+            let header = line.substring(line.indexOf('# ') + '# '.length);
+    
+            // Remove link.
+            if (header.startsWith('[')) {
+                header = header.substring('['.length, header.indexOf(']'));
+            }
+
+            return header;
+        }
     }
 
     dispose() {
