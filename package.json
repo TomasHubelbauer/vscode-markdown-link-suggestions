@@ -4,6 +4,10 @@
     "description": "Suggests local files and header anchors in MarkDown links",
     "version": "0.0.1",
     "publisher": "TomasHubelbauer",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions.git"
+    },
     "engines": {
         "vscode": "^1.22.0"
     },
@@ -15,12 +19,7 @@
     ],
     "main": "./out/extension",
     "contributes": {
-        "commands": [
-            {
-                "command": "extension.sayHello",
-                "title": "Hello World"
-            }
-        ]
+        "commands": []
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",
