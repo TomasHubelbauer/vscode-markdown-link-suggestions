@@ -2,7 +2,7 @@
     "name": "vscode-markdown-link-suggestions",
     "displayName": "MarkDown Link Suggestions",
     "description": "Suggests local files and header anchors in MarkDown links",
-    "version": "1.0.1",
+    "version": "2.0.0",
     "publisher": "TomasHubelbauer",
     "repository": {
         "type": "git",
@@ -36,6 +36,6 @@
         "vscode": "^1.1.6"
     },
     "dependencies": {
-        "markdown-dom": "^0.0.2"
+        "markdown-dom": "^0.0.5"
     }
 }

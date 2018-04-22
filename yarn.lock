@@ -1106,9 +1106,9 @@ map-stream@~0.1.0:
   version "0.1.0"
   resolved "https://registry.yarnpkg.com/map-stream/-/map-stream-0.1.0.tgz#e56aa94c4c8055a16404a0674b78f215f7c8e194"
 
-markdown-dom@^0.0.2:
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/markdown-dom/-/markdown-dom-0.0.2.tgz#2a0059a372c311aae5c44786309fabec71f76fac"
+markdown-dom@^0.0.5:
+  version "0.0.5"
+  resolved "https://registry.yarnpkg.com/markdown-dom/-/markdown-dom-0.0.5.tgz#265a9bbb65bd2f3a8804573c0668fd98859b5ea2"
 
 merge-stream@^1.0.0:
   version "1.0.1"

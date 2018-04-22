@@ -1,5 +1,13 @@
 # Change Log
 
+## `2.0.0` (2018-04-22)
+
+- Improve display of suggestion:
+  - For files, display only name and display workspace relative path in detail
+  - For headers, display header text and display file path in detail
+- Improve sorting and filtering to be predictable
+- Update MarkDownDOM for good types
+
 ## `1.0.1` (2018-04-20)
 
 Integrate [MarkDownDOM](https://gitlab.com/TomasHubelbauer/markdown-dom) for MarkDown header plain text parsing and search only unexcluded files.

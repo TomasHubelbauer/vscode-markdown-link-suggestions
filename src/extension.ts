@@ -1,5 +1,6 @@
 'use strict';
 
+import * as path from 'path';
 import MarkDownDOM from 'markdown-dom';
 import { ExtensionContext, languages, TextDocument, Position, CancellationToken, CompletionContext, CompletionItem, CompletionItemProvider, Range, workspace, Uri, CompletionItemKind } from 'vscode';
 
@@ -29,17 +30,29 @@ class LinkProvider implements CompletionItemProvider {
                 return;
             }
 
-            const label = file.fsPath.substring(workspace.getWorkspaceFolder(Uri.file(file.fsPath))!.uri.fsPath.length + 1);
-            items.push({ label: label, kind: CompletionItemKind.File });
+            const filePath = file.fsPath.substring(workspace.getWorkspaceFolder(Uri.file(file.fsPath))!.uri.fsPath.length + 1);
+            const { name, ext } = path.parse(filePath);
+            const fileName = name + ext;
+            const fileItem = new CompletionItem(fileName, CompletionItemKind.File);
+            fileItem.detail = fileName;
+            fileItem.documentation = filePath;
+            fileItem.sortText = filePath;
+            fileItem.filterText = filePath;
+            items.push(fileItem);
 
             if (file.fsPath.endsWith('.md')) {
                 const textDocument = await workspace.openTextDocument(file);
                 const lines = textDocument.getText().split(/\r|\n/).filter(line => line.trim().startsWith('#'));
                 for (const line of lines) {
                     const header = this.strip(line);
-    
                     const anchor = header.toLowerCase().replace(/\s/g, '-');
-                    items.push({ label: label + ' ' + header, insertText: label + '#' + anchor, kind: CompletionItemKind.Reference });
+                    const headerItem = new CompletionItem(`${header} (${fileName})`, CompletionItemKind.Reference);
+                    headerItem.detail = header;
+                    headerItem.documentation = filePath;
+                    headerItem.insertText = filePath + '#' + anchor;
+                    headerItem.sortText = filePath + ' ' + anchor;
+                    headerItem.filterText = filePath + ' ' + header + ' ' + anchor;
+                    items.push(headerItem);
                 }
             }
         }
@@ -51,10 +64,19 @@ class LinkProvider implements CompletionItemProvider {
         try {
             const dom = MarkDownDOM.parse(line);
             let header = '';
-            // TODO: Fix weird types
-            for (const span of (dom as any).blocks[0].spans) {
-                if (span.type === 'run') {
-                    header += span.text;
+
+            const block = dom.blocks[0];
+            if (block.type !== 'header') {
+                throw new Error('Not a header block!');
+            }
+
+            for (const span of block.spans) {
+                switch (span.type) {
+                    case 'run': header += span.text; break;
+                    case 'link': header += span.text; break;
+                    default: {
+                        // TODO: Telemetry.
+                    }
                 }
             }
             
@@ -72,6 +94,6 @@ class LinkProvider implements CompletionItemProvider {
     }
 
     dispose() {
-        // TODO: Dispose if the cache.
+        // TODO: Dispose of the cache.
     }
 }
