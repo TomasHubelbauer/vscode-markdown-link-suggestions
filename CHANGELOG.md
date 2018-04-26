@@ -1,5 +1,10 @@
 # Change Log
 
+## `2.0.1` (2018-04-26)
+
+- Ignore `search.exclude` correctly when searching for files (no `node_modules` etc.)
+- Filter paths with both forward and backward slashes
+
 ## `2.0.0` (2018-04-22)
 
 - Improve display of suggestion:
