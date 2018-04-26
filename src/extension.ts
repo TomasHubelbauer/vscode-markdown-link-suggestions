@@ -2,11 +2,11 @@
 
 import * as path from 'path';
 import MarkDownDOM from 'markdown-dom';
-import { ExtensionContext, languages, TextDocument, Position, CancellationToken, CompletionContext, CompletionItem, CompletionItemProvider, Range, workspace, Uri, CompletionItemKind } from 'vscode';
+import { ExtensionContext, languages, TextDocument, Position, CancellationToken, CompletionContext, CompletionItem, CompletionItemProvider, Range, workspace, Uri, CompletionItemKind, RelativePattern } from 'vscode';
 
 export function activate(context: ExtensionContext) {
     const linkProvider = new LinkProvider();
-    context.subscriptions.push(languages.registerCompletionItemProvider({ scheme: 'file', language: 'markdown'}, linkProvider, '('));
+    context.subscriptions.push(languages.registerCompletionItemProvider({ scheme: 'file', language: 'markdown' }, linkProvider, '('));
     context.subscriptions.push(linkProvider);
 }
 
@@ -23,7 +23,20 @@ class LinkProvider implements CompletionItemProvider {
             return;
         }
 
-        const files = await workspace.findFiles('**/*.*', undefined); // Exclude default exclusions using `undefined`
+        // TODO: https://github.com/Microsoft/vscode/issues/48674
+        const excludes = await workspace.getConfiguration('search').get('exclude')!;
+        const globs = Object.keys(excludes).map(exclude => new RelativePattern(workspace.workspaceFolders![0], exclude));
+        const occurences: { [fsPath: string]: number; } = {};
+        for (const glob of globs) {
+            // TODO: https://github.com/Microsoft/vscode/issues/47645
+            for (const file of await workspace.findFiles('**/*.*', glob)) {
+                occurences[file.fsPath] = (occurences[file.fsPath] || 0) + 1;
+            }
+        }
+
+        // Accept only files not excluded in any of the globs
+        const files = Object.keys(occurences).filter(fsPath => occurences[fsPath] === globs.length).map(file => Uri.file(file));
+
         const items: CompletionItem[] = [];
         for (const file of files) {
             if (file.scheme !== 'file') {
@@ -37,7 +50,7 @@ class LinkProvider implements CompletionItemProvider {
             fileItem.detail = fileName;
             fileItem.documentation = filePath;
             fileItem.sortText = filePath;
-            fileItem.filterText = filePath;
+            fileItem.filterText = filePath.replace(/\\/g, '/') + ' ' + filePath.replace(/\//g, '\\');
             items.push(fileItem);
 
             if (file.fsPath.endsWith('.md')) {
@@ -51,7 +64,7 @@ class LinkProvider implements CompletionItemProvider {
                     headerItem.documentation = filePath;
                     headerItem.insertText = filePath + '#' + anchor;
                     headerItem.sortText = filePath + ' ' + anchor;
-                    headerItem.filterText = filePath + ' ' + header + ' ' + anchor;
+                    headerItem.filterText = filePath.replace(/\\/g, '/') + ' ' + filePath.replace(/\//g, '\\') + ' ' + header + ' ' + anchor;
                     items.push(headerItem);
                 }
             }
@@ -79,11 +92,11 @@ class LinkProvider implements CompletionItemProvider {
                     }
                 }
             }
-            
+
             return header.trim();
         } catch (error) {
             let header = line.substring(line.indexOf('# ') + '# '.length);
-    
+
             // Remove link.
             if (header.startsWith('[')) {
                 header = header.substring('['.length, header.indexOf(']'));
