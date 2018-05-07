@@ -1,5 +1,10 @@
 # Change Log
 
+## `3.0.0` (2018-05-07)
+
+- Insert correct relative paths in respect to the current document
+- Suggest directories on top of already existing file and header suggestions
+
 ## `2.0.1` (2018-04-26)
 
 - Ignore `search.exclude` correctly when searching for files (no `node_modules` etc.)

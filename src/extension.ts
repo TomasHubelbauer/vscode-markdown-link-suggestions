@@ -5,6 +5,11 @@ import MarkDownDOM from 'markdown-dom';
 import { ExtensionContext, languages, TextDocument, Position, CancellationToken, CompletionContext, CompletionItem, CompletionItemProvider, Range, workspace, Uri, CompletionItemKind, RelativePattern } from 'vscode';
 
 export function activate(context: ExtensionContext) {
+    if (workspace.workspaceFolders === undefined) {
+        // Ignore files opened without a folder.
+        return;
+    }
+
     const linkProvider = new LinkProvider();
     context.subscriptions.push(languages.registerCompletionItemProvider({ scheme: 'file', language: 'markdown' }, linkProvider, '('));
     context.subscriptions.push(linkProvider);
@@ -22,6 +27,8 @@ class LinkProvider implements CompletionItemProvider {
         if (check !== '](') {
             return;
         }
+
+        const documentDirectoryPath = path.dirname(document.uri.fsPath);
 
         // TODO: https://github.com/Microsoft/vscode/issues/48674
         const excludes = await workspace.getConfiguration('search').get('exclude')!;
@@ -43,31 +50,55 @@ class LinkProvider implements CompletionItemProvider {
                 return;
             }
 
-            const filePath = file.fsPath.substring(workspace.getWorkspaceFolder(Uri.file(file.fsPath))!.uri.fsPath.length + 1);
-            const { name, ext } = path.parse(filePath);
-            const fileName = name + ext;
-            const fileItem = new CompletionItem(fileName, CompletionItemKind.File);
-            fileItem.detail = fileName;
-            fileItem.documentation = filePath;
-            fileItem.sortText = filePath;
-            fileItem.filterText = filePath.replace(/\\/g, '/') + ' ' + filePath.replace(/\//g, '\\');
+            const absoluteFilePath = file.fsPath;
+            const relativeFilePath = path.relative(documentDirectoryPath, absoluteFilePath);
+
+            const fileItem = new CompletionItem(relativeFilePath, CompletionItemKind.File);
+            fileItem.detail = path.basename(relativeFilePath);
+            fileItem.documentation = absoluteFilePath;
+            fileItem.insertText = relativeFilePath;
+            fileItem.sortText = relativeFilePath;
+            fileItem.filterText = [absoluteFilePath.replace(/\\/g, '/'), absoluteFilePath.replace(/\//g, '\\')].join();
             items.push(fileItem);
 
-            if (file.fsPath.endsWith('.md')) {
+            if (path.extname(relativeFilePath).toUpperCase() === '.MD') {
                 const textDocument = await workspace.openTextDocument(file);
                 const lines = textDocument.getText().split(/\r|\n/).filter(line => line.trim().startsWith('#'));
                 for (const line of lines) {
                     const header = this.strip(line);
                     const anchor = header.toLowerCase().replace(/\s/g, '-');
-                    const headerItem = new CompletionItem(`${header} (${fileName})`, CompletionItemKind.Reference);
+
+                    const headerItem = new CompletionItem(`${header} (${relativeFilePath})`, CompletionItemKind.Reference);
                     headerItem.detail = header;
-                    headerItem.documentation = filePath;
-                    headerItem.insertText = filePath + '#' + anchor;
-                    headerItem.sortText = filePath + ' ' + anchor;
-                    headerItem.filterText = filePath.replace(/\\/g, '/') + ' ' + filePath.replace(/\//g, '\\') + ' ' + header + ' ' + anchor;
+                    headerItem.documentation = absoluteFilePath;
+                    headerItem.insertText = relativeFilePath + '#' + anchor;
+                    headerItem.sortText = relativeFilePath + '#' + anchor;
+                    headerItem.filterText = [absoluteFilePath.replace(/\\/g, '/'), absoluteFilePath.replace(/\//g, '\\'), header, anchor].join();
                     items.push(headerItem);
                 }
             }
+        }
+
+        const directories = files.reduce((directoryPaths, filePath) => {
+            const directoryPath = path.dirname(filePath.fsPath);
+            if (!directoryPaths.includes(directoryPath)) {
+                directoryPaths.push(directoryPath);
+            }
+
+            return directoryPaths;
+        }, [] as string[]);
+
+        for (const directory of directories) {
+            const absoluteDirectoryPath = directory;
+            const relativeDirectoryPath = path.relative(documentDirectoryPath, absoluteDirectoryPath);
+
+            const directoryItem = new CompletionItem(relativeDirectoryPath, CompletionItemKind.Folder);
+            directoryItem.detail = path.basename(relativeDirectoryPath);
+            directoryItem.documentation = absoluteDirectoryPath;
+            directoryItem.insertText = relativeDirectoryPath;
+            directoryItem.sortText = relativeDirectoryPath;
+            directoryItem.filterText = [absoluteDirectoryPath.replace(/\\/g, '/'), absoluteDirectoryPath.replace(/\//g, '\\')].join();
+            items.push(directoryItem);
         }
 
         return items;
