@@ -1,8 +1,9 @@
 'use strict';
 
-import * as path from 'path';
 import MarkDownDOM from 'markdown-dom';
-import { ExtensionContext, languages, TextDocument, Position, CancellationToken, CompletionContext, CompletionItem, CompletionItemProvider, Range, workspace, Uri, CompletionItemKind, RelativePattern } from 'vscode';
+import * as path from 'path';
+import * as fsExtra from 'fs-extra';
+import { CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, CompletionItemProvider, Diagnostic, DiagnosticCollection, DiagnosticSeverity, ExtensionContext, FileSystemWatcher, Position, Range, RelativePattern, TextDocument, Uri, languages, workspace } from 'vscode';
 
 export function activate(context: ExtensionContext) {
     if (workspace.workspaceFolders === undefined) {
@@ -13,6 +14,98 @@ export function activate(context: ExtensionContext) {
     const linkProvider = new LinkProvider();
     context.subscriptions.push(languages.registerCompletionItemProvider({ scheme: 'file', language: 'markdown' }, linkProvider, '('));
     context.subscriptions.push(linkProvider);
+
+    const linkChecker = new LinkChecker();
+    context.subscriptions.push(linkChecker);
+}
+
+class LinkChecker {
+    private static ignoredSchemes = ['http', 'https'];
+    private readonly diagnosticCollection: DiagnosticCollection;
+    private readonly watcher: FileSystemWatcher;
+
+    constructor() {
+        this.diagnosticCollection = languages.createDiagnosticCollection('MarkDown Links');
+        this.watcher = workspace.createFileSystemWatcher('**/*.md');
+
+        this.watcher.onDidChange(async uri => {
+            const textDocument = await workspace.openTextDocument(uri);
+            // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
+            //const diags = [...await this.diag(textDocument)];
+            this.diagnosticCollection.set(uri, await this.diag(textDocument));
+        });
+
+        this.watcher.onDidCreate(async uri => {
+            const textDocument = await workspace.openTextDocument(uri);
+            // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
+            //const diags = [...await this.diag(textDocument)];
+            this.diagnosticCollection.set(uri, await this.diag(textDocument));
+        });
+
+        this.watcher.onDidDelete(uri => this.diagnosticCollection.delete(uri));
+
+        this.index();
+    }
+
+    private async index() {
+        // TODO: https://github.com/Microsoft/vscode/issues/48674
+        const excludes = await workspace.getConfiguration('search', null).get('exclude')!;
+        const globs = Object.keys(excludes).map(exclude => new RelativePattern(workspace.workspaceFolders![0], exclude));
+        const occurences: { [fsPath: string]: number; } = {};
+        for (const glob of globs) {
+            // TODO: https://github.com/Microsoft/vscode/issues/47645
+            for (const file of await workspace.findFiles('**/*.md', glob)) {
+                occurences[file.fsPath] = (occurences[file.fsPath] || 0) + 1;
+            }
+        }
+
+        // Accept only files not excluded in any of the globs
+        const files = Object.keys(occurences).filter(fsPath => occurences[fsPath] === globs.length);
+        for (const file of files) {
+            const uri = Uri.file(file);
+            const textDocument = await workspace.openTextDocument(uri);
+            // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
+            //const diags = [...await this.diag(textDocument)];
+            this.diagnosticCollection.set(uri, await this.diag(textDocument));
+        }
+    }
+
+    // TODO: Use MarkDownDOM for finding the links within the document
+    private async /* `*`diag */diag(textDocument: TextDocument)/*: AsyncIterableIterator<Diagnostic> */ {
+        const regex = /(?:__|[*#])|\[.*?\]\((.*?)\)/gm;
+        const text = textDocument.getText();
+        let match: RegExpExecArray;
+        // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
+        const diags: Diagnostic[] = [];
+        while ((match = regex.exec(text)!) !== null) {
+            const target = match[1];
+            if (target === undefined) {
+                continue;
+            }
+
+            const uri = Uri.parse(target);
+            if (LinkChecker.ignoredSchemes.includes(uri.scheme)) {
+                continue;
+            }
+
+            const relativePath = uri.fsPath;
+            const documentDirectoryPath = path.dirname(textDocument.uri.fsPath);
+            const absolutePath = path.resolve(documentDirectoryPath, relativePath);
+            if (!await fsExtra.pathExists(absolutePath)) {
+                const range = new Range(textDocument.positionAt(match.index), textDocument.positionAt(match.index + match.length));
+                // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
+                // yield new Diagnostic…
+                diags.push(new Diagnostic(range, `The path ${absolutePath} doesn't exist on the disk.`, DiagnosticSeverity.Error));
+            }
+        }
+
+        return diags;
+    }
+
+    public dispose() {
+        this.diagnosticCollection.dispose();
+        this.watcher.dispose();
+    }
 }
 
 class LinkProvider implements CompletionItemProvider {
