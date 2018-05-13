@@ -20,7 +20,7 @@ export function activate(context: ExtensionContext) {
 }
 
 class LinkChecker {
-    private static ignoredSchemes = ['http', 'https'];
+    private static ignoredSchemes = ['http', 'https', 'mailto'];
     private readonly diagnosticCollection: DiagnosticCollection;
     private readonly watcher: FileSystemWatcher;
 

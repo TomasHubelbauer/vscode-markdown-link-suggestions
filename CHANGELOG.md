@@ -1,5 +1,9 @@
 # Change Log
 
+## `4.0.1` (2018-05-13)
+
+Do not path-check `mailto` links.
+
 ## `4.0.0` (2018-05-08)
 
 Report broken links to the Problems pane (using a diagnostic collection which will also color Explorer pane items red if they have errors).
