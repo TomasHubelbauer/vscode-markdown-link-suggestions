@@ -3,6 +3,12 @@
     "displayName": "MarkDown Link Suggestions",
     "description": "Suggests local files and header anchors in MarkDown links",
     "version": "4.0.1",
+    "license": "MIT",
+    "categories": [
+        "Programming Languages",
+        "Linters"
+    ],
+    "keywords": ["markdown", "link", "intellisense"],
     "publisher": "TomasHubelbauer",
     "repository": {
         "type": "git",
