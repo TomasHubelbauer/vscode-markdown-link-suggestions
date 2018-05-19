@@ -4,4 +4,4 @@
 - [https](https://google.com)
 - [mailto](mailto:tomas@hubelbauer.net)
 - [file ok](README.md)
-- [file ko](DONOTREADME.md)
+- [file ko](README.md)

@@ -3,7 +3,7 @@
 import MarkDownDOM from 'markdown-dom';
 import * as path from 'path';
 import * as fsExtra from 'fs-extra';
-import { CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, CompletionItemProvider, Diagnostic, DiagnosticCollection, DiagnosticSeverity, ExtensionContext, FileSystemWatcher, Position, Range, RelativePattern, TextDocument, Uri, languages, workspace } from 'vscode';
+import { CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, CompletionItemProvider, Diagnostic, DiagnosticCollection, DiagnosticSeverity, ExtensionContext, FileSystemWatcher, Position, Range, RelativePattern, TextDocument, Uri, languages, workspace, TextEdit } from 'vscode';
 
 export function activate(context: ExtensionContext) {
     if (workspace.workspaceFolders === undefined) {
@@ -12,7 +12,7 @@ export function activate(context: ExtensionContext) {
     }
 
     const linkProvider = new LinkProvider();
-    context.subscriptions.push(languages.registerCompletionItemProvider({ scheme: 'file', language: 'markdown' }, linkProvider, '('));
+    context.subscriptions.push(languages.registerCompletionItemProvider({ scheme: 'file', language: 'markdown' }, linkProvider, '(', '['));
     context.subscriptions.push(linkProvider);
 
     const linkChecker = new LinkChecker();
@@ -115,14 +115,23 @@ class LinkProvider implements CompletionItemProvider {
     }
 
     async provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken, context: CompletionContext) {
-        const check = document.getText(new Range(position.translate(0, -2), position));
-        // Bail if we're not within the context of the target reference portion of a MarkDown link.
-        if (check !== '](') {
+        // TODO: Extend to be able to handle suggestions after backspacing (see if this fires but we already have some text)
+        const fullSuggestMode = document.getText(new Range(position.translate(0, -1), position)) === '[';
+        let fullSuggestModeBraceCompleted = false;
+        let partialSuggestModeBraceCompleted = false;
+        const braceCompletionRange = new Range(position, position.translate(0, 1));
+        if (fullSuggestMode) {
+            fullSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ']';
+        } else if (document.getText(new Range(position.translate(0, -2), position)) !== '](') {
+            // Bail if we are in neither full suggest mode nor partial (link target) suggest mode
             return;
+        } else {
+            partialSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ')';
         }
 
         const documentDirectoryPath = path.dirname(document.uri.fsPath);
 
+        // TODO: https://github.com/TomasHubelbauer/vscode-extension-findFilesWithExcludes
         // TODO: https://github.com/Microsoft/vscode/issues/48674
         const excludes = await workspace.getConfiguration('search').get('exclude')!;
         const globs = Object.keys(excludes).map(exclude => new RelativePattern(workspace.workspaceFolders![0], exclude));
@@ -143,30 +152,13 @@ class LinkProvider implements CompletionItemProvider {
                 return;
             }
 
-            const absoluteFilePath = file.fsPath;
-            const relativeFilePath = path.relative(documentDirectoryPath, absoluteFilePath);
-
-            const fileItem = new CompletionItem(relativeFilePath, CompletionItemKind.File);
-            fileItem.detail = path.basename(relativeFilePath);
-            fileItem.documentation = absoluteFilePath;
-            fileItem.insertText = relativeFilePath;
-            fileItem.sortText = relativeFilePath;
-            fileItem.filterText = [absoluteFilePath.replace(/\\/g, '/'), absoluteFilePath.replace(/\//g, '\\')].join();
-            items.push(fileItem);
-
-            if (path.extname(relativeFilePath).toUpperCase() === '.MD') {
+            items.push(this.item(CompletionItemKind.File, file.fsPath, null, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
+            if (path.extname(file.fsPath).toUpperCase() === '.MD') {
                 const textDocument = await workspace.openTextDocument(file);
                 const lines = textDocument.getText().split(/\r|\n/).filter(line => line.trim().startsWith('#'));
                 for (const line of lines) {
                     const header = this.strip(line);
-                    const anchor = header.toLowerCase().replace(/\s/g, '-');
-
-                    const headerItem = new CompletionItem(`${header} (${relativeFilePath})`, CompletionItemKind.Reference);
-                    headerItem.detail = header;
-                    headerItem.documentation = absoluteFilePath;
-                    headerItem.insertText = relativeFilePath + '#' + anchor;
-                    headerItem.sortText = relativeFilePath + '#' + anchor;
-                    headerItem.filterText = [absoluteFilePath.replace(/\\/g, '/'), absoluteFilePath.replace(/\//g, '\\'), header, anchor].join();
+                    const headerItem = this.item(CompletionItemKind.Reference, file.fsPath, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange);
                     items.push(headerItem);
                 }
             }
@@ -182,16 +174,7 @@ class LinkProvider implements CompletionItemProvider {
         }, [] as string[]);
 
         for (const directory of directories) {
-            const absoluteDirectoryPath = directory;
-            const relativeDirectoryPath = path.relative(documentDirectoryPath, absoluteDirectoryPath);
-
-            const directoryItem = new CompletionItem(relativeDirectoryPath, CompletionItemKind.Folder);
-            directoryItem.detail = path.basename(relativeDirectoryPath);
-            directoryItem.documentation = absoluteDirectoryPath;
-            directoryItem.insertText = relativeDirectoryPath;
-            directoryItem.sortText = relativeDirectoryPath;
-            directoryItem.filterText = [absoluteDirectoryPath.replace(/\\/g, '/'), absoluteDirectoryPath.replace(/\//g, '\\')].join();
-            items.push(directoryItem);
+            items.push(this.item(CompletionItemKind.Folder, directory, null, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
         }
 
         return items;
@@ -228,6 +211,56 @@ class LinkProvider implements CompletionItemProvider {
 
             return header;
         }
+    }
+
+    item(kind: CompletionItemKind, absoluteFilePath: string, header: string | null, absoluteDocumentDirectoryPath: string, fullSuggestMode: boolean, fullSuggestModeBraceCompleted: boolean, partialSuggestModeBraceCompleted: boolean, braceCompletionRange: Range) {
+        // Extract and join the file name with header (if any) for displaying in the label
+        const fileName = path.basename(absoluteFilePath);
+        let fileNameWithHeader = fileName;
+        if (header !== null) {
+            fileNameWithHeader += header;
+        }
+
+        // Put together a label in a `name#header (directory if not current)` format
+        let label = fileNameWithHeader;
+        const relativeDirectoryPath = path.relative(absoluteDocumentDirectoryPath, path.dirname(absoluteFilePath));
+        if (relativeDirectoryPath !== '') {
+            label += ` (${relativeDirectoryPath})`;
+        }
+
+        // Construct the completion item based on the label and the provided kind
+        const item = new CompletionItem(label, kind);
+        // Display standalone header, otherwise fall back to displaying the name we then know doesn't have fragment (header)
+        item.detail = header || fileName;
+        // Display expanded and normalized absolute path for inspection
+        item.documentation = path.normalize(absoluteFilePath);
+        // Derive anchorized version of the header to ensure working linkage
+        const anchor = header === null ? '' : '#' + header.toLowerCase().replace(/\s/g, '-');
+        // Compute suggested file path relative to the currently edited file's directory path
+        let relativeFilePath = path.relative(absoluteDocumentDirectoryPath, absoluteFilePath);
+        // TODO: URL encode path minimally (to make VS Code work, like replacing + sign and other otherwise linkage breaking characters)
+        relativeFilePath = relativeFilePath; // TODO
+        // Insert either relative file path with anchor only or file name without anchor in the MarkDown link syntax if in full suggest mode
+        if (fullSuggestMode) {
+            item.insertText = `${fileName}](${relativeFilePath}${anchor})`;
+        } else {
+            item.insertText = relativeFilePath + anchor;
+            if (!partialSuggestModeBraceCompleted) {
+                item.insertText += ')';
+            }
+        }
+
+        // Sort by the relative path name for now (predictable but not amazingly helpful)
+        // TODO: Consider sorting by timestamp
+        item.sortText = relativeFilePath; // TODO
+        // Offer both forwards slash and backwards slash filter paths so that the user can type regardless of the platform
+        item.filterText = [absoluteFilePath.replace(/\\/g, '/'), absoluteFilePath.replace(/\//g, '\\')].join();
+        // Remove brace-completed closing square bracket if any (may be turned off) when in full suggest mode because we insert our own and then some
+        if (fullSuggestMode && fullSuggestModeBraceCompleted) {
+            item.additionalTextEdits = [new TextEdit(braceCompletionRange, '')];
+        }
+
+        return item;
     }
 
     dispose() {

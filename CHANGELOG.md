@@ -1,5 +1,9 @@
 # Change Log
 
+## Unreleased `5.0.0` (2018-05-19)
+
+- Suggest on both `[` (file name is used as link text) and already supported `(` (path-only)
+
 ## `4.0.1` (2018-05-13)
 
 Do not path-check `mailto` links.
