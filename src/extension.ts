@@ -224,7 +224,7 @@ export class LinkProvider implements CompletionItemProvider {
         const fileName = path.basename(absoluteFilePath);
         let fileNameWithHeader = fileName;
         if (header !== null) {
-            fileNameWithHeader += header;
+            fileNameWithHeader += ' # ' + header;
         }
 
         // Put together a label in a `name#header (directory if not current)` format
