@@ -11,9 +11,7 @@ export function activate(context: ExtensionContext) {
         return;
     }
 
-    const linkProvider = new LinkProvider();
-    context.subscriptions.push(languages.registerCompletionItemProvider({ scheme: 'file', language: 'markdown' }, linkProvider, '(', '['));
-    context.subscriptions.push(linkProvider);
+    context.subscriptions.push(languages.registerCompletionItemProvider({ scheme: 'file', language: 'markdown' }, new LinkProvider(), '[', '('));
 
     const linkChecker = new LinkChecker();
     context.subscriptions.push(linkChecker);
@@ -108,7 +106,7 @@ class LinkChecker {
     }
 }
 
-class LinkProvider implements CompletionItemProvider {
+export class LinkProvider implements CompletionItemProvider {
     constructor() {
         // TODO: Cache workspace files
         // TODO: Update cache when workspace file is saved (`workspace.onDidSaveTextDocument`)
@@ -116,17 +114,25 @@ class LinkProvider implements CompletionItemProvider {
 
     async provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken, context: CompletionContext) {
         // TODO: Extend to be able to handle suggestions after backspacing (see if this fires but we already have some text)
-        const fullSuggestMode = document.getText(new Range(position.translate(0, -1), position)) === '[';
+        const fullSuggestMode = context.triggerCharacter === '[';
         let fullSuggestModeBraceCompleted = false;
         let partialSuggestModeBraceCompleted = false;
         const braceCompletionRange = new Range(position, position.translate(0, 1));
         if (fullSuggestMode) {
             fullSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ']';
-        } else if (document.getText(new Range(position.translate(0, -2), position)) !== '](') {
-            // Bail if we are in neither full suggest mode nor partial (link target) suggest mode
-            return;
         } else {
-            partialSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ')';
+            const linkConfirmationRange = new Range(position.translate(0, -2), position);
+            if (context.triggerCharacter === '(') {
+                if (document.getText(linkConfirmationRange) === '](') {
+                    partialSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ')';
+                } else {
+                    // Bail if this is just a regular parentheses, not MarkDown link
+                    return;
+                }
+            } else {
+                // Bail if we are in neither full suggest mode nor partial (link target) suggest mode
+                return;
+            }
         }
 
         const documentDirectoryPath = path.dirname(document.uri.fsPath);
@@ -180,7 +186,7 @@ class LinkProvider implements CompletionItemProvider {
         return items;
     }
 
-    strip(line: string) {
+    private strip(line: string) {
         try {
             const dom = MarkDownDOM.parse(line);
             let header = '';
@@ -213,7 +219,7 @@ class LinkProvider implements CompletionItemProvider {
         }
     }
 
-    item(kind: CompletionItemKind, absoluteFilePath: string, header: string | null, absoluteDocumentDirectoryPath: string, fullSuggestMode: boolean, fullSuggestModeBraceCompleted: boolean, partialSuggestModeBraceCompleted: boolean, braceCompletionRange: Range) {
+    private item(kind: CompletionItemKind, absoluteFilePath: string, header: string | null, absoluteDocumentDirectoryPath: string, fullSuggestMode: boolean, fullSuggestModeBraceCompleted: boolean, partialSuggestModeBraceCompleted: boolean, braceCompletionRange: Range) {
         // Extract and join the file name with header (if any) for displaying in the label
         const fileName = path.basename(absoluteFilePath);
         let fileNameWithHeader = fileName;
@@ -261,9 +267,5 @@ class LinkProvider implements CompletionItemProvider {
         }
 
         return item;
-    }
-
-    dispose() {
-        // TODO: Dispose of the cache.
     }
 }
