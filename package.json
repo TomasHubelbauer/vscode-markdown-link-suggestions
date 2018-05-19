@@ -2,13 +2,18 @@
     "name": "vscode-markdown-link-suggestions",
     "displayName": "MarkDown Link Suggestions",
     "description": "Suggests local files and header anchors in MarkDown links",
-    "version": "4.0.1",
+    "version": "5.0.0",
     "license": "MIT",
     "categories": [
         "Programming Languages",
         "Linters"
     ],
-    "keywords": ["markdown", "link", "intellisense"],
+    "keywords": [
+        "markdown",
+        "link",
+        "intellisense",
+        "autocomplete"
+    ],
     "publisher": "TomasHubelbauer",
     "repository": {
         "type": "git",
@@ -17,9 +22,6 @@
     "engines": {
         "vscode": "^1.22.0"
     },
-    "categories": [
-        "Other"
-    ],
     "activationEvents": [
         "workspaceContains:**/*.md",
         "onLanguage:markdown"
