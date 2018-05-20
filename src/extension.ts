@@ -89,11 +89,25 @@ class LinkChecker {
             const relativePath = uri.fsPath;
             const documentDirectoryPath = path.dirname(textDocument.uri.fsPath);
             const absolutePath = path.resolve(documentDirectoryPath, relativePath);
+            const range = new Range(textDocument.positionAt(match.index), textDocument.positionAt(match.index + match[0].length));
             if (!await fsExtra.pathExists(absolutePath)) {
-                const range = new Range(textDocument.positionAt(match.index), textDocument.positionAt(match.index + match.length));
                 // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
                 // yield new Diagnostic…
                 diags.push(new Diagnostic(range, `The path ${absolutePath} doesn't exist on the disk.`, DiagnosticSeverity.Error));
+            }
+
+            if (uri.fragment !== '' && (await fsExtra.stat(absolutePath)).isFile()) {
+                let headerExists = false;
+                for (const { text } of getHeaders(await workspace.openTextDocument(absolutePath))) {
+                    if (anchorize(text) === uri.fragment) {
+                        headerExists = true;
+                        break;
+                    }
+                }
+
+                if (!headerExists) {
+                    diags.push(new Diagnostic(range, `The header ${uri.fragment} doesn't exist in file ${absolutePath}.`, DiagnosticSeverity.Error));
+                }
             }
         }
 
@@ -140,7 +154,7 @@ export class LinkProvider implements CompletionItemProvider {
 
         // TODO: https://github.com/TomasHubelbauer/vscode-extension-findFilesWithExcludes
         // TODO: https://github.com/Microsoft/vscode/issues/48674
-        const excludes = await workspace.getConfiguration('search').get('exclude')!;
+        const excludes = await workspace.getConfiguration('search', null).get('exclude')!;
         const globs = Object.keys(excludes).map(exclude => new RelativePattern(workspace.workspaceFolders![0], exclude));
         const occurences: { [fsPath: string]: number; } = {};
         for (const glob of globs) {
@@ -161,11 +175,7 @@ export class LinkProvider implements CompletionItemProvider {
 
             items.push(this.item(CompletionItemKind.File, file.fsPath, null, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
             if (path.extname(file.fsPath).toUpperCase() === '.MD') {
-                const textDocument = await workspace.openTextDocument(file);
-                const lines = textDocument.getText().split(/\r|\n/).filter(line => line.trim().startsWith('#'));
-                for (let index = 0; index < lines.length; index++) {
-                    const line = lines[index];
-                    const text = this.strip(line);
+                for (const { index, text } of getHeaders(await workspace.openTextDocument(file))) {
                     items.push(this.item(CompletionItemKind.Reference, file.fsPath, { index, text }, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
                 }
             }
@@ -185,39 +195,6 @@ export class LinkProvider implements CompletionItemProvider {
         }
 
         return items;
-    }
-
-    private strip(line: string) {
-        try {
-            const dom = MarkDownDOM.parse(line);
-            let header = '';
-
-            const block = dom.blocks[0];
-            if (block.type !== 'header') {
-                throw new Error('Not a header block!');
-            }
-
-            for (const span of block.spans) {
-                switch (span.type) {
-                    case 'run': header += span.text; break;
-                    case 'link': header += span.text; break;
-                    default: {
-                        // TODO: Telemetry.
-                    }
-                }
-            }
-
-            return header.trim();
-        } catch (error) {
-            let header = line.substring(line.indexOf('# ') + '# '.length);
-
-            // Remove link.
-            if (header.startsWith('[')) {
-                header = header.substring('['.length, header.indexOf(']'));
-            }
-
-            return header;
-        }
     }
 
     private item(kind: CompletionItemKind, absoluteFilePath: string, header: { index: number; text: string; } | null, absoluteDocumentDirectoryPath: string, fullSuggestMode: boolean, fullSuggestModeBraceCompleted: boolean, partialSuggestModeBraceCompleted: boolean, braceCompletionRange: Range) {
@@ -242,7 +219,7 @@ export class LinkProvider implements CompletionItemProvider {
         // Display expanded and normalized absolute path for inspection
         item.documentation = path.normalize(absoluteFilePath);
         // Derive anchorized version of the header to ensure working linkage
-        const anchor = header === null ? '' : '#' + header.text.toLowerCase().replace(/\s/g, '-');
+        const anchor = header === null ? '' : '#' + anchorize(header.text);
         // Compute suggested file path relative to the currently edited file's directory path
         let relativeFilePath = path.relative(absoluteDocumentDirectoryPath, absoluteFilePath);
         // TODO: URL encode path minimally (to make VS Code work, like replacing + sign and other otherwise linkage breaking characters)
@@ -275,4 +252,47 @@ export class LinkProvider implements CompletionItemProvider {
 
         return item;
     }
+}
+
+function* getHeaders(textDocument: TextDocument) {
+    for (let index = 0; index < textDocument.lineCount; index++) {
+        const line = textDocument.lineAt(index);
+        if (!line.text.startsWith('#')) {
+            continue;
+        }
+
+        let text = '';
+        try {
+            const dom = MarkDownDOM.parse(line.text);
+            const block = dom.blocks[0];
+            if (block.type !== 'header') {
+                throw new Error('Not a header block!');
+            }
+
+            for (const span of block.spans) {
+                switch (span.type) {
+                    case 'run': text += span.text; break;
+                    case 'link': text += span.text; break;
+                    default: {
+                        // TODO: Telemetry.
+                    }
+                }
+            }
+
+            text = text.trim();
+        } catch (error) {
+            text = line.text.substring(line.text.indexOf('# ') + '# '.length);
+
+            // Remove link.
+            if (text.startsWith('[')) {
+                text = text.substring('['.length, text.indexOf(']'));
+            }
+        }
+
+        yield { index, text };
+    }
+}
+
+function anchorize(header: string) {
+    return header.toLowerCase().replace(/\s/g, '-');
 }
