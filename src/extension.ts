@@ -125,6 +125,7 @@ export class LinkProvider implements CompletionItemProvider {
             if (context.triggerCharacter === '(') {
                 if (document.getText(linkConfirmationRange) === '](') {
                     partialSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ')';
+                    // TODO: Read the link text to be able to rank items matching it higher
                 } else {
                     // Bail if this is just a regular parentheses, not MarkDown link
                     return;
