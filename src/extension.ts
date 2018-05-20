@@ -270,7 +270,7 @@ export class LinkProvider implements CompletionItemProvider {
         item.filterText = [absoluteFilePath.replace(/\\/g, '/'), absoluteFilePath.replace(/\//g, '\\')].join();
         // Remove brace-completed closing square bracket if any (may be turned off) when in full suggest mode because we insert our own and then some
         if (fullSuggestMode && fullSuggestModeBraceCompleted) {
-            item.additionalTextEdits = [new TextEdit(braceCompletionRange, '')];
+            item.additionalTextEdits = [TextEdit.delete(braceCompletionRange)];
         }
 
         return item;
