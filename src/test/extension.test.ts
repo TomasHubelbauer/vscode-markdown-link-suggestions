@@ -40,6 +40,7 @@ suite("Extension Tests", function () {
             '/out/test/README.md',
             'README.md](../out/test/README.md#test)',
             'README.md # Test (../out/test)',
+            'test'
         );
 
         checkItem(
@@ -48,6 +49,7 @@ suite("Extension Tests", function () {
             '/out/test/README.md',
             'README.md](../out/test/README.md#header-1)',
             'README.md # Header 1 (../out/test)',
+            'header-1'
         );
 
         checkItem(
@@ -91,6 +93,7 @@ suite("Extension Tests", function () {
             '/out/test/README.md',
             '../out/test/README.md#test)',
             'README.md # Test (../out/test)',
+            'test'
         );
 
         checkItem(
@@ -99,6 +102,7 @@ suite("Extension Tests", function () {
             '/out/test/README.md',
             '../out/test/README.md#header-1)',
             'README.md # Header 1 (../out/test)',
+            'header-1'
         );
 
         checkItem(
@@ -106,7 +110,7 @@ suite("Extension Tests", function () {
             'test',
             '/out/test',
             '../out/test)',
-            'test (../out)',
+            'test (../out)'
         );
     }).timeout(5000);
 });
@@ -115,7 +119,7 @@ function findItem(items: CompletionItem[], kind: CompletionItemKind, detail: str
     return items.find(item => item.kind === kind && item.detail === detail)!;
 }
 
-function checkItem(item: CompletionItem, detail: string, documentationAndFilterAndSortEndsWith: string, insertText: string, label: string) {
+function checkItem(item: CompletionItem, detail: string, documentationAndFilterAndSortEndsWith: string, insertText: string, label: string, anchor?: string) {
     assert.equal(item.detail, detail);
     assert.equal((item.documentation! as string).replace(/\\/g, '/').endsWith(documentationAndFilterAndSortEndsWith), true);
     assert.equal(item.filterText!.split(',').length, 2);
@@ -123,5 +127,5 @@ function checkItem(item: CompletionItem, detail: string, documentationAndFilterA
     assert.equal(item.filterText!.split(',')[1].endsWith(documentationAndFilterAndSortEndsWith.replace(/\//g, '\\')), true);
     assert.equal((item.insertText! as string).replace(/\\/g, '/'), insertText);
     assert.equal(item.label.replace(/\\/g, '/'), label);
-    assert.equal(item.sortText!.replace(/\\/g, '/'), '..' + documentationAndFilterAndSortEndsWith);
+    assert.equal(item.sortText!.replace(/\\/g, '/'), '..' + documentationAndFilterAndSortEndsWith + (anchor || ''));
 }

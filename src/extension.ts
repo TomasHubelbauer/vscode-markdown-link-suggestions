@@ -257,8 +257,8 @@ export class LinkProvider implements CompletionItemProvider {
         }
 
         // Sort by the relative path name for now (predictable but not amazingly helpful)
-        // TODO: Consider sorting by timestamp
-        item.sortText = relativeFilePath; // TODO
+        // TODO: Contribute a setting for sorting by timestamp then by this
+        item.sortText = relativeFilePath + anchor; // TODO
         // Offer both forwards slash and backwards slash filter paths so that the user can type regardless of the platform
         item.filterText = [absoluteFilePath.replace(/\\/g, '/'), absoluteFilePath.replace(/\//g, '\\')].join();
         // Remove brace-completed closing square bracket if any (may be turned off) when in full suggest mode because we insert our own and then some
