@@ -1,9 +1,10 @@
 # Change Log
 
-## Unreleased
+## `6.0.0` (2018-05-20)
 
 - Update sorting to show header-less file suggestion before file header suggestions from the same file
 - Sort file headers in document order
+- Validate header existence on top of file existence in link checker Problems pane diagnostic contributions
 
 ## `5.0.0` (2018-05-19)
 
