@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+- Update sorting to show header-less file suggestion before file header suggestions from the same file
+- Sort file headers in document order
+
 ## `5.0.0` (2018-05-19)
 
 - Suggest on both `[` (file name is used as link text) and already supported `(` (path-only)

@@ -40,7 +40,7 @@ suite("Extension Tests", function () {
             '/out/test/README.md',
             'README.md](../out/test/README.md#test)',
             'README.md # Test (../out/test)',
-            'test'
+            '00000test'
         );
 
         checkItem(
@@ -49,7 +49,7 @@ suite("Extension Tests", function () {
             '/out/test/README.md',
             'README.md](../out/test/README.md#header-1)',
             'README.md # Header 1 (../out/test)',
-            'header-1'
+            '00001header-1'
         );
 
         checkItem(
@@ -93,7 +93,7 @@ suite("Extension Tests", function () {
             '/out/test/README.md',
             '../out/test/README.md#test)',
             'README.md # Test (../out/test)',
-            'test'
+            '00000test'
         );
 
         checkItem(
@@ -102,7 +102,7 @@ suite("Extension Tests", function () {
             '/out/test/README.md',
             '../out/test/README.md#header-1)',
             'README.md # Header 1 (../out/test)',
-            'header-1'
+            '00001header-1'
         );
 
         checkItem(

@@ -162,10 +162,10 @@ export class LinkProvider implements CompletionItemProvider {
             if (path.extname(file.fsPath).toUpperCase() === '.MD') {
                 const textDocument = await workspace.openTextDocument(file);
                 const lines = textDocument.getText().split(/\r|\n/).filter(line => line.trim().startsWith('#'));
-                for (const line of lines) {
-                    const header = this.strip(line);
-                    const headerItem = this.item(CompletionItemKind.Reference, file.fsPath, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange);
-                    items.push(headerItem);
+                for (let index = 0; index < lines.length; index++) {
+                    const line = lines[index];
+                    const text = this.strip(line);
+                    items.push(this.item(CompletionItemKind.Reference, file.fsPath, { index, text }, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
                 }
             }
         }
@@ -219,12 +219,12 @@ export class LinkProvider implements CompletionItemProvider {
         }
     }
 
-    private item(kind: CompletionItemKind, absoluteFilePath: string, header: string | null, absoluteDocumentDirectoryPath: string, fullSuggestMode: boolean, fullSuggestModeBraceCompleted: boolean, partialSuggestModeBraceCompleted: boolean, braceCompletionRange: Range) {
+    private item(kind: CompletionItemKind, absoluteFilePath: string, header: { index: number; text: string; } | null, absoluteDocumentDirectoryPath: string, fullSuggestMode: boolean, fullSuggestModeBraceCompleted: boolean, partialSuggestModeBraceCompleted: boolean, braceCompletionRange: Range) {
         // Extract and join the file name with header (if any) for displaying in the label
         const fileName = path.basename(absoluteFilePath);
         let fileNameWithHeader = fileName;
         if (header !== null) {
-            fileNameWithHeader += ' # ' + header;
+            fileNameWithHeader += ' # ' + header.text;
         }
 
         // Put together a label in a `name#header (directory if not current)` format
@@ -237,11 +237,11 @@ export class LinkProvider implements CompletionItemProvider {
         // Construct the completion item based on the label and the provided kind
         const item = new CompletionItem(label, kind);
         // Display standalone header, otherwise fall back to displaying the name we then know doesn't have fragment (header)
-        item.detail = header || fileName;
+        item.detail = header ? header.text : fileName;
         // Display expanded and normalized absolute path for inspection
         item.documentation = path.normalize(absoluteFilePath);
         // Derive anchorized version of the header to ensure working linkage
-        const anchor = header === null ? '' : '#' + header.toLowerCase().replace(/\s/g, '-');
+        const anchor = header === null ? '' : '#' + header.text.toLowerCase().replace(/\s/g, '-');
         // Compute suggested file path relative to the currently edited file's directory path
         let relativeFilePath = path.relative(absoluteDocumentDirectoryPath, absoluteFilePath);
         // TODO: URL encode path minimally (to make VS Code work, like replacing + sign and other otherwise linkage breaking characters)
@@ -258,7 +258,13 @@ export class LinkProvider implements CompletionItemProvider {
 
         // Sort by the relative path name for now (predictable but not amazingly helpful)
         // TODO: Contribute a setting for sorting by timestamp then by this
-        item.sortText = relativeFilePath + anchor; // TODO
+        item.sortText = relativeFilePath; // TODO
+        if (header !== null) {
+            // Sort headers in the document order
+            item.sortText += header.index.toString().padStart(5, '0');
+            item.sortText += anchor;
+        }
+
         // Offer both forwards slash and backwards slash filter paths so that the user can type regardless of the platform
         item.filterText = [absoluteFilePath.replace(/\\/g, '/'), absoluteFilePath.replace(/\//g, '\\')].join();
         // Remove brace-completed closing square bracket if any (may be turned off) when in full suggest mode because we insert our own and then some
