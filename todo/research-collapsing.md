@@ -2,5 +2,8 @@
 
 See if a MarkDown link syntax like `[link](https://example.com/)` could be somehow collapsed (like outlining but on one line).
 
-If yes, hide the surrounding syntax so it ends up looking like this: `link`.
-And at the same time have a `DocumentLinkProvider` for the `link` range in the syntax, so the link text becomes clickable and target hidden.
+[`FoldingRangeProvider`](https://code.visualstudio.com/docs/extensionAPI/vscode-api#FoldingRangeProvider)
+can be used to hide the `(target)` portion, but we probably cannot remove the `[`
+(and it makes no sense to remove just the `]` with the `(target)` range).
+
+`DocumentLinkProvider` can be used to make the `link` range in the syntax clickable.
