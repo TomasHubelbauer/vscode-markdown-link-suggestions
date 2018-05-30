@@ -3,7 +3,12 @@
 import MarkDownDOM from 'markdown-dom';
 import * as path from 'path';
 import * as fsExtra from 'fs-extra';
-import { CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, CompletionItemProvider, Diagnostic, DiagnosticCollection, DiagnosticSeverity, ExtensionContext, FileSystemWatcher, Position, Range, RelativePattern, TextDocument, Uri, languages, workspace, TextEdit } from 'vscode';
+import {
+    CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, CompletionItemProvider,
+    Diagnostic, DiagnosticCollection, DiagnosticSeverity, ExtensionContext, FileSystemWatcher, Position,
+    Range, RelativePattern, TextDocument, Uri, languages, workspace, TextEdit, DocumentLinkProvider,
+    DocumentLink,
+} from 'vscode';
 
 export function activate(context: ExtensionContext) {
     if (workspace.workspaceFolders === undefined) {
@@ -11,14 +16,13 @@ export function activate(context: ExtensionContext) {
         return;
     }
 
-    context.subscriptions.push(languages.registerCompletionItemProvider({ scheme: 'file', language: 'markdown' }, new LinkProvider(), '[', '('));
-
-    const linkChecker = new LinkChecker();
-    context.subscriptions.push(linkChecker);
+    const markDownDocumentSelector = { scheme: 'file', language: 'markdown' };
+    context.subscriptions.push(languages.registerCompletionItemProvider(markDownDocumentSelector, new LinkCompletionItemProvider(), '[', '('));
+    context.subscriptions.push(new LinkDiagnosticProvider());
+    languages.registerDocumentLinkProvider(markDownDocumentSelector, new LinkDocumentLinkProvider());
 }
 
-class LinkChecker {
-    private static ignoredSchemes = ['http', 'https', 'mailto'];
+class LinkDiagnosticProvider {
     private readonly diagnosticCollection: DiagnosticCollection;
     private readonly watcher: FileSystemWatcher;
 
@@ -70,43 +74,27 @@ class LinkChecker {
 
     // TODO: Use MarkDownDOM for finding the links within the document
     private async /* `*`diag */diag(textDocument: TextDocument)/*: AsyncIterableIterator<Diagnostic> */ {
-        const regex = /(?:__|[*#])|\[.*?\]\((.*?)\)/gm;
-        const text = textDocument.getText();
-        let match: RegExpExecArray;
         // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
         const diags: Diagnostic[] = [];
-        while ((match = regex.exec(text)!) !== null) {
-            const target = match[1];
-            if (target === undefined) {
-                continue;
-            }
-
-            const uri = Uri.parse(target);
-            if (LinkChecker.ignoredSchemes.includes(uri.scheme)) {
-                continue;
-            }
-
-            const relativePath = uri.fsPath;
-            const documentDirectoryPath = path.dirname(textDocument.uri.fsPath);
-            const absolutePath = path.resolve(documentDirectoryPath, relativePath);
-            const range = new Range(textDocument.positionAt(match.index), textDocument.positionAt(match.index + match[0].length));
+        for (const link of getLinks(textDocument)) {
+            const absolutePath = resolvePath(textDocument, link.uri);
             if (!await fsExtra.pathExists(absolutePath)) {
                 // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
                 // yield new Diagnostic…
-                diags.push(new Diagnostic(range, `The path ${absolutePath} doesn't exist on the disk.`, DiagnosticSeverity.Error));
+                diags.push(new Diagnostic(link.uriRange, `The path ${absolutePath} doesn't exist on the disk.`, DiagnosticSeverity.Error));
             }
 
-            if (uri.fragment !== '' && (await fsExtra.stat(absolutePath)).isFile()) {
+            if (link.uri.fragment !== '' && (await fsExtra.stat(absolutePath)).isFile()) {
                 let headerExists = false;
                 for (const { text } of getHeaders(await workspace.openTextDocument(absolutePath))) {
-                    if (anchorize(text) === uri.fragment) {
+                    if (anchorize(text) === link.uri.fragment) {
                         headerExists = true;
                         break;
                     }
                 }
 
                 if (!headerExists) {
-                    diags.push(new Diagnostic(range, `The header ${uri.fragment} doesn't exist in file ${absolutePath}.`, DiagnosticSeverity.Error));
+                    diags.push(new Diagnostic(link.uriRange, `The header ${link.uri.fragment} doesn't exist in file ${absolutePath}.`, DiagnosticSeverity.Error));
                 }
             }
         }
@@ -120,7 +108,7 @@ class LinkChecker {
     }
 }
 
-export class LinkProvider implements CompletionItemProvider {
+export class LinkCompletionItemProvider implements CompletionItemProvider {
     constructor() {
         // TODO: Cache workspace files
         // TODO: Update cache when workspace file is saved (`workspace.onDidSaveTextDocument`)
@@ -254,6 +242,25 @@ export class LinkProvider implements CompletionItemProvider {
     }
 }
 
+class LinkDocumentLinkProvider implements DocumentLinkProvider {
+    provideDocumentLinks(document: TextDocument, token: CancellationToken): DocumentLink[] {
+        return [...getLinks(document)].map(({ text, textRange, uri }) => {
+            return new DocumentLink(textRange, Uri.file(resolvePath(document, uri)));
+        });
+    }
+}
+
+// https://github.com/Microsoft/vscode/issues/50839
+class LinkFoldingRangeProvider implements FoldingRangeProvider {
+    provideFoldingRanges(document: TextDocument, context: FoldingContext, token: CancellationToken): FoldingRange[] {
+        return [...getLinks(document)].map(({ uri, uriRange }) => {
+            // Fuck! This only allows folding across multiple lines!
+            // TODO: https://github.com/Microsoft/vscode/issues/50840
+            return new FoldingRange(textRange, Uri.file(resolvePath(document, uri)));
+        });
+    }
+}
+
 function* getHeaders(textDocument: TextDocument) {
     for (let index = 0; index < textDocument.lineCount; index++) {
         const line = textDocument.lineAt(index);
@@ -293,6 +300,45 @@ function* getHeaders(textDocument: TextDocument) {
     }
 }
 
+const ignoredSchemes = ['http', 'https', 'mailto'];
+function* getLinks(textDocument: TextDocument) {
+    const regex = /(?:__|[*#])|\[(.*?)\]\((.*?)\)/gm;
+    const text = textDocument.getText();
+    let match: RegExpExecArray;
+    // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
+    while ((match = regex.exec(text)!) !== null) {
+        const text = match[1];
+        const target = match[2];
+        if (text === undefined || target === undefined) {
+            continue;
+        }
+
+        const uri = Uri.parse(target);
+        if (ignoredSchemes.includes(uri.scheme)) {
+            continue;
+        }
+
+        const textRange = new Range(
+            textDocument.positionAt(match.index).translate(0, 1 /* `[` */),
+            textDocument.positionAt(match.index).translate(0, 1 /* `[` */ + text.length)
+        );
+
+        const uriRange = new Range(
+            textDocument.positionAt(match.index).translate(0, 1 + text.length + 2 /* `[` + text + `](` */),
+            textDocument.positionAt(match.index).translate(0, 1 + text.length + 2 /* `[` + text + `](` */ + target.length)
+        );
+
+        yield { text, textRange, uri, uriRange };
+    }
+}
+
 function anchorize(header: string) {
     return header.toLowerCase().replace(/\s/g, '-');
+}
+
+function resolvePath(textDocument: TextDocument, target: Uri) {
+    const relativePath = target.fsPath;
+    const documentDirectoryPath = path.dirname(textDocument.uri.fsPath);
+    const absolutePath = path.resolve(documentDirectoryPath, relativePath);
+    return absolutePath;
 }

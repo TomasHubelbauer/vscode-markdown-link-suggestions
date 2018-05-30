@@ -20,8 +20,9 @@
         "url": "https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions.git"
     },
     "engines": {
-        "vscode": "^1.22.0"
+        "vscode": "^1.23.0"
     },
+    "enableProposedApi": true,
     "activationEvents": [
         "workspaceContains:**/*.md",
         "onLanguage:markdown"
