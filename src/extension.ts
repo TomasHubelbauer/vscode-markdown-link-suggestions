@@ -1,14 +1,9 @@
 'use strict';
 
+import * as fsExtra from 'fs-extra';
 import MarkDownDOM from 'markdown-dom';
 import * as path from 'path';
-import * as fsExtra from 'fs-extra';
-import {
-    CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, CompletionItemProvider,
-    Diagnostic, DiagnosticCollection, DiagnosticSeverity, ExtensionContext, FileSystemWatcher, Position,
-    Range, RelativePattern, TextDocument, Uri, languages, workspace, TextEdit, DocumentLinkProvider,
-    DocumentLink,
-} from 'vscode';
+import { CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, CompletionItemProvider, Diagnostic, DiagnosticCollection, DiagnosticSeverity, DocumentLink, DocumentLinkProvider, ExtensionContext, FileSystemWatcher, FoldingContext, FoldingRange, FoldingRangeProvider, Position, Range, RelativePattern, TextDocument, TextEdit, Uri, languages, workspace } from 'vscode';
 
 export function activate(context: ExtensionContext) {
     if (workspace.workspaceFolders === undefined) {
