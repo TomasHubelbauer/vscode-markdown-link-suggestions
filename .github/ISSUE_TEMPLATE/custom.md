@@ -1,6 +1,6 @@
 ---
-name: Custom issue template
-about: Describe this issue template's purpose here.
+name: Issue
+about: Please use this template so that I get an email notification for your issue
 
 ---
 
