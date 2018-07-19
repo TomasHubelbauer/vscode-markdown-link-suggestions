@@ -12,8 +12,8 @@ export function activate(context: ExtensionContext) {
     }
 
     const markDownDocumentSelector = { scheme: 'file', language: 'markdown' };
-    const { allowFullSuggestMode } = workspace.getConfiguration('markdown-link-suggestions');
-    const linkCompletionItemProvider = new LinkCompletionItemProvider(allowFullSuggestMode);
+    const { allowFullSuggestMode, allowSuggestionsForHeaders } = workspace.getConfiguration('markdown-link-suggestions');
+    const linkCompletionItemProvider = new LinkCompletionItemProvider(allowFullSuggestMode, allowSuggestionsForHeaders);
     context.subscriptions.push(languages.registerCompletionItemProvider(markDownDocumentSelector, linkCompletionItemProvider, '[', '('));
     context.subscriptions.push(new LinkDiagnosticProvider());
 
@@ -21,9 +21,10 @@ export function activate(context: ExtensionContext) {
     languages.registerDocumentLinkProvider(markDownDocumentSelector, new LinkDocumentLinkProvider());
 
     workspace.onDidChangeConfiguration(event => {
-        if (event.affectsConfiguration('markdown-link-suggestions.allowFullSuggestMode')) {
-            const { allowFullSuggestMode } = workspace.getConfiguration('markdown-link-suggestions');
+        if (event.affectsConfiguration('markdown-link-suggestions')) {
+            const { allowFullSuggestMode, allowSuggestionsForHeaders } = workspace.getConfiguration('markdown-link-suggestions');
             linkCompletionItemProvider.allowFullSuggestMode = allowFullSuggestMode;
+            linkCompletionItemProvider.allowSuggestionsForHeaders = allowSuggestionsForHeaders;
         }
     });
 }
@@ -115,12 +116,14 @@ class LinkDiagnosticProvider {
 }
 
 export class LinkCompletionItemProvider implements CompletionItemProvider {
-    public allowFullSuggestMode = true;
+    public allowFullSuggestMode = false;
+    public allowSuggestionsForHeaders = true;
 
-    constructor(allowFullSuggestMode: boolean) {
+    constructor(allowFullSuggestMode: boolean, allowSuggestionsForHeaders: boolean) {
         // TODO: Cache workspace files
         // TODO: Update cache when workspace file is saved (`workspace.onDidSaveTextDocument`)
         this.allowFullSuggestMode = allowFullSuggestMode;
+        this.allowSuggestionsForHeaders = allowSuggestionsForHeaders;
     }
 
     async provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken, context: CompletionContext) {
@@ -175,7 +178,7 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
             }
 
             items.push(this.item(CompletionItemKind.File, file.fsPath, null, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
-            if (path.extname(file.fsPath).toUpperCase() === '.MD') {
+            if (path.extname(file.fsPath).toUpperCase() === '.MD' && this.allowSuggestionsForHeaders) {
                 for (const { index, text } of getHeaders(await workspace.openTextDocument(file))) {
                     items.push(this.item(CompletionItemKind.Reference, file.fsPath, { index, text }, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
                 }

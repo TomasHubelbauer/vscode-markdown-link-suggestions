@@ -5,7 +5,7 @@ import * as path from 'path';
 import * as fsExtra from 'fs-extra';
 
 // NOTE: Workspace is `out/test` so suggestions are from those files
-// TODO: Add tests for suggest mode configuration
+// TODO: Add tests for full suggest mode and header suggestions configuration settings
 suite("Extension Tests", function () {
 
     const token = new CancellationTokenSource().token;
@@ -21,7 +21,7 @@ suite("Extension Tests", function () {
             editBuilder.insert(triggerPosition, '\n' + triggerCharacter);
         });
 
-        const items = await new LinkCompletionItemProvider(true).provideCompletionItems(textDocument, triggerPosition, token, {
+        const items = await new LinkCompletionItemProvider(true, true).provideCompletionItems(textDocument, triggerPosition, token, {
             triggerKind: CompletionTriggerKind.TriggerCharacter,
             triggerCharacter,
         });
@@ -75,7 +75,7 @@ suite("Extension Tests", function () {
 
         triggerPosition = textDocument.lineAt(textDocument.lineCount - 1).range.start.translate(0, '[test]'.length + triggerCharacter.length);
 
-        const items = await new LinkCompletionItemProvider(true).provideCompletionItems(textDocument, triggerPosition, token, {
+        const items = await new LinkCompletionItemProvider(true, true).provideCompletionItems(textDocument, triggerPosition, token, {
             triggerKind: CompletionTriggerKind.TriggerCharacter,
             triggerCharacter,
         });

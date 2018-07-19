@@ -1,5 +1,9 @@
 # Change Log
 
+## `7.0.1` (2018-07-19)
+
+- Add a configuration setting for toggling suggestions for headers and default it to `true` (existing behavior)
+
 ## `7.0.0` (2018-07-19)
 
 - Add a configuration setting for toggling full suggestion mode (include suggestions on `[` in addition to the standard `(`)
