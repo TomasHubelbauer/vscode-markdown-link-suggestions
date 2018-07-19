@@ -320,7 +320,7 @@ const ignoredSchemes = ['http', 'https', 'mailto'];
 function* getLinks(textDocument: TextDocument) {
     const text = textDocument.getText();
     const codeBlockRanges = [...getCodeBlockRanges(text)];
-    const regex = /(?:__|[*#])|\[(.*?)\]\((.*?)\)/gm;
+    const regex = /[^`](?:__|[*#])|\[(.*?)\]\((.*?)\)[^`]/gm;
     let match: RegExpExecArray | null;
     // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
     while ((match = regex.exec(text)) !== null) {

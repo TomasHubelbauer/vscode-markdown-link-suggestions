@@ -1,5 +1,9 @@
 # Change Log
 
+## `7.0.3` (2018-07-19)
+
+- Do not recognized links in MarkDown inline code spans either.
+
 ## `7.0.2` (2018-07-19)
 
 - Do not recognize links in MarkDown code blocks so that file path validation diagnostic doesn't operate on them either
