@@ -1,5 +1,9 @@
 # Change Log
 
+## `7.0.2` (2018-07-19)
+
+- Do not recognize links in MarkDown code blocks so that file path validation diagnostic doesn't operate on them either
+
 ## `7.0.1` (2018-07-19)
 
 - Add a configuration setting for toggling suggestions for headers and default it to `true` (existing behavior)

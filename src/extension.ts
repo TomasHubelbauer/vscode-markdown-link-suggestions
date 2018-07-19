@@ -318,11 +318,16 @@ function* getHeaders(textDocument: TextDocument) {
 
 const ignoredSchemes = ['http', 'https', 'mailto'];
 function* getLinks(textDocument: TextDocument) {
-    const regex = /(?:__|[*#])|\[(.*?)\]\((.*?)\)/gm;
     const text = textDocument.getText();
-    let match: RegExpExecArray;
+    const codeBlockRanges = [...getCodeBlockRanges(text)];
+    const regex = /(?:__|[*#])|\[(.*?)\]\((.*?)\)/gm;
+    let match: RegExpExecArray | null;
     // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
-    while ((match = regex.exec(text)!) !== null) {
+    while ((match = regex.exec(text)) !== null) {
+        if (codeBlockRanges.some(range => range.start <= match!.index && range.end >= match!.index)) {
+            continue;
+        }
+
         const text = match[1];
         const target = match[2];
         if (text === undefined || target === undefined) {
@@ -345,6 +350,26 @@ function* getLinks(textDocument: TextDocument) {
         );
 
         yield { text, textRange, uri, uriRange };
+    }
+}
+
+function* getCodeBlockRanges(text: string) {
+    let tempIndex: number | null = null;
+    const regex = /^```/gm;
+    let match: RegExpExecArray | null;
+
+    while ((match = regex.exec(text)) !== null) {
+        console.log(tempIndex, match.index);
+        if (tempIndex === null) {
+            tempIndex = match.index;
+        } else {
+            yield { start: tempIndex, end: match.index };
+            tempIndex = null;
+        }
+    }
+
+    if (tempIndex !== null) {
+        yield { start: tempIndex, end: text.length };
     }
 }
 
