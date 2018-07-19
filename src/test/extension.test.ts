@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { workspace, CancellationTokenSource, CompletionTriggerKind, window, CompletionItemKind, CompletionItem, commands } from 'vscode';
-import { LinkProvider } from '../extension';
+import { LinkCompletionItemProvider } from '../extension';
 import * as path from 'path';
 import * as fsExtra from 'fs-extra';
 
@@ -20,7 +20,7 @@ suite("Extension Tests", function () {
             editBuilder.insert(triggerPosition, '\n' + triggerCharacter);
         });
 
-        const items = await new LinkProvider().provideCompletionItems(textDocument, triggerPosition, token, {
+        const items = await new LinkCompletionItemProvider().provideCompletionItems(textDocument, triggerPosition, token, {
             triggerKind: CompletionTriggerKind.TriggerCharacter,
             triggerCharacter,
         });
@@ -74,7 +74,7 @@ suite("Extension Tests", function () {
 
         triggerPosition = textDocument.lineAt(textDocument.lineCount - 1).range.start.translate(0, '[test]'.length + triggerCharacter.length);
 
-        const items = await new LinkProvider().provideCompletionItems(textDocument, triggerPosition, token, {
+        const items = await new LinkCompletionItemProvider().provideCompletionItems(textDocument, triggerPosition, token, {
             triggerKind: CompletionTriggerKind.TriggerCharacter,
             triggerCharacter,
         });

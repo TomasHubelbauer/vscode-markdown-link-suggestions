@@ -3,7 +3,7 @@
 import * as fsExtra from 'fs-extra';
 import MarkDownDOM from 'markdown-dom';
 import * as path from 'path';
-import { CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, CompletionItemProvider, Diagnostic, DiagnosticCollection, DiagnosticSeverity, DocumentLink, DocumentLinkProvider, ExtensionContext, FileSystemWatcher, FoldingContext, FoldingRange, FoldingRangeProvider, Position, Range, RelativePattern, TextDocument, TextEdit, Uri, languages, workspace } from 'vscode';
+import { CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, CompletionItemProvider, Diagnostic, DiagnosticCollection, DiagnosticSeverity, DocumentLink, DocumentLinkProvider, ExtensionContext, FileSystemWatcher, Position, Range, RelativePattern, TextDocument, TextEdit, Uri, languages, workspace } from 'vscode';
 
 export function activate(context: ExtensionContext) {
     if (workspace.workspaceFolders === undefined) {
@@ -246,15 +246,15 @@ class LinkDocumentLinkProvider implements DocumentLinkProvider {
 }
 
 // https://github.com/Microsoft/vscode/issues/50839
-class LinkFoldingRangeProvider implements FoldingRangeProvider {
-    provideFoldingRanges(document: TextDocument, context: FoldingContext, token: CancellationToken): FoldingRange[] {
-        return [...getLinks(document)].map(({ uri, uriRange }) => {
-            // Fuck! This only allows folding across multiple lines!
-            // TODO: https://github.com/Microsoft/vscode/issues/50840
-            return new FoldingRange(textRange, Uri.file(resolvePath(document, uri)));
-        });
-    }
-}
+// class LinkFoldingRangeProvider implements FoldingRangeProvider {
+//     provideFoldingRanges(document: TextDocument, context: FoldingContext, token: CancellationToken): FoldingRange[] {
+//         return [...getLinks(document)].map(({ uri, uriRange }) => {
+//             // Fuck! This only allows folding across multiple lines!
+//             // TODO: https://github.com/Microsoft/vscode/issues/50840
+//             return new FoldingRange(textRange, Uri.file(resolvePath(document, uri)));
+//         });
+//     }
+// }
 
 function* getHeaders(textDocument: TextDocument) {
     for (let index = 0; index < textDocument.lineCount; index++) {
