@@ -12,9 +12,20 @@ export function activate(context: ExtensionContext) {
     }
 
     const markDownDocumentSelector = { scheme: 'file', language: 'markdown' };
-    context.subscriptions.push(languages.registerCompletionItemProvider(markDownDocumentSelector, new LinkCompletionItemProvider(), '[', '('));
+    const { allowFullSuggestMode } = workspace.getConfiguration('markdown-link-suggestions');
+    const linkCompletionItemProvider = new LinkCompletionItemProvider(allowFullSuggestMode);
+    context.subscriptions.push(languages.registerCompletionItemProvider(markDownDocumentSelector, linkCompletionItemProvider, '[', '('));
     context.subscriptions.push(new LinkDiagnosticProvider());
+
+
     languages.registerDocumentLinkProvider(markDownDocumentSelector, new LinkDocumentLinkProvider());
+
+    workspace.onDidChangeConfiguration(event => {
+        if (event.affectsConfiguration('markdown-link-suggestions.allowFullSuggestMode')) {
+            const { allowFullSuggestMode } = workspace.getConfiguration('markdown-link-suggestions');
+            linkCompletionItemProvider.allowFullSuggestMode = allowFullSuggestMode;
+        }
+    });
 }
 
 class LinkDiagnosticProvider {
@@ -104,14 +115,21 @@ class LinkDiagnosticProvider {
 }
 
 export class LinkCompletionItemProvider implements CompletionItemProvider {
-    constructor() {
+    public allowFullSuggestMode = true;
+
+    constructor(allowFullSuggestMode: boolean) {
         // TODO: Cache workspace files
         // TODO: Update cache when workspace file is saved (`workspace.onDidSaveTextDocument`)
+        this.allowFullSuggestMode = allowFullSuggestMode;
     }
 
     async provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken, context: CompletionContext) {
         // TODO: Extend to be able to handle suggestions after backspacing (see if this fires but we already have some text)
         const fullSuggestMode = context.triggerCharacter === '[';
+        if (fullSuggestMode && !this.allowFullSuggestMode) {
+            return;
+        }
+
         let fullSuggestModeBraceCompleted = false;
         let partialSuggestModeBraceCompleted = false;
         const braceCompletionRange = new Range(position, position.translate(0, 1));

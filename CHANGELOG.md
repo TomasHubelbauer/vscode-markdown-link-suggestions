@@ -1,5 +1,10 @@
 # Change Log
 
+## `7.0.0` (2018-07-19)
+
+- Add a configuration setting for toggling full suggestion mode (include suggestions on `[` in addition to the standard `(`)
+- Default the new configuration to `false`, breaking the behavior of past versions (it is a niche feature and the new default should be the right choice)
+
 ## `6.0.0` (2018-05-20)
 
 - Update sorting to show header-less file suggestion before file header suggestions from the same file

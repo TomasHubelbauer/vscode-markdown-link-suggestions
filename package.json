@@ -29,7 +29,17 @@
     ],
     "main": "./out/extension",
     "contributes": {
-        "commands": []
+        "configuration": [
+            {
+                "title": "markdown-link-suggestions",
+                "properties": {
+                    "markdown-link-suggestions.allowFullSuggestMode": {
+                        "type": "boolean",
+                        "default": false
+                    }
+                }
+            }
+        ]
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",
