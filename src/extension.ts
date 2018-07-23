@@ -127,8 +127,9 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
     }
 
     async provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken, context: CompletionContext) {
+        const character = context.triggerCharacter || /* Ctrl + Space */ document.getText(new Range(position.translate(0, -1), position));
         // TODO: Extend to be able to handle suggestions after backspacing (see if this fires but we already have some text)
-        const fullSuggestMode = context.triggerCharacter === '[';
+        const fullSuggestMode = character === '[';
         if (fullSuggestMode && !this.allowFullSuggestMode) {
             return;
         }
@@ -140,7 +141,7 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
             fullSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ']';
         } else {
             const linkConfirmationRange = new Range(position.translate(0, -2), position);
-            if (context.triggerCharacter === '(') {
+            if (character === '(') {
                 if (document.getText(linkConfirmationRange) === '](') {
                     partialSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ')';
                     // TODO: Read the link text to be able to rank items matching it higher
@@ -359,7 +360,6 @@ function* getCodeBlockRanges(text: string) {
     let match: RegExpExecArray | null;
 
     while ((match = regex.exec(text)) !== null) {
-        console.log(tempIndex, match.index);
         if (tempIndex === null) {
             tempIndex = match.index;
         } else {

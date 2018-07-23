@@ -1,5 +1,10 @@
 # Change Log
 
+## `7.0.4` (2018-07-23)
+
+- Support triggering suggestions by the VS Code shortcut (Ctrl + Space by default)
+  - Please be aware that this still only works after `(` (and `[` if enabled in settings)
+
 ## `7.0.3` (2018-07-19)
 
 - Do not recognized links in MarkDown inline code spans either.
