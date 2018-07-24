@@ -3,6 +3,7 @@
 - [http](http://google.com)
 - [https](https://google.com)
 - [mailto](mailto:tomas@hubelbauer.net)
+- [custom](custom:tomas@hubelbauer.net)
 - [file ok](README.md)
 - [file ko](README.md)
   - Change this during demo otherwise F5 will fail due to invalid URL

@@ -2,7 +2,7 @@
     "name": "vscode-markdown-link-suggestions",
     "displayName": "MarkDown Link Suggestions",
     "description": "Suggests local files and header anchors in MarkDown links",
-    "version": "7.0.4",
+    "version": "8.0.0",
     "license": "MIT",
     "categories": [
         "Programming Languages",

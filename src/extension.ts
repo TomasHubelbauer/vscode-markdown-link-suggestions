@@ -317,7 +317,6 @@ function* getHeaders(textDocument: TextDocument) {
     }
 }
 
-const ignoredSchemes = ['http', 'https', 'mailto'];
 function* getLinks(textDocument: TextDocument) {
     const text = textDocument.getText();
     const codeBlockRanges = [...getCodeBlockRanges(text)];
@@ -336,7 +335,7 @@ function* getLinks(textDocument: TextDocument) {
         }
 
         const uri = Uri.parse(target);
-        if (ignoredSchemes.includes(uri.scheme)) {
+        if (uri.scheme && uri.scheme !== 'file') {
             continue;
         }
 

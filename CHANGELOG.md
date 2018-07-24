@@ -1,5 +1,9 @@
 # Change Log
 
+## `8.0.0` (2018-07-24)
+
+- Diagnose links for local path existence only for URLs with no scheme or explicit `file` scheme
+
 ## `7.0.4` (2018-07-23)
 
 - Support triggering suggestions by the VS Code shortcut (Ctrl + Space by default)
