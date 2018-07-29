@@ -1,0 +1,17 @@
+html {
+  display: flex;
+  height: 100%;
+}
+
+body {
+  border: 10vw solid black;
+  color: white;
+  font: normal 15vw sans-serif;
+  margin: 0;
+  overflow: hidden;
+  text-align: center;
+}
+
+body.nonHeadless {
+  background: #666;
+}

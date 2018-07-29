@@ -2,7 +2,7 @@
     "name": "vscode-markdown-link-suggestions",
     "displayName": "MarkDown Link Suggestions",
     "description": "Suggests local files and header anchors in MarkDown links",
-    "version": "9.0.0",
+    "version": "9.0.1",
     "license": "MIT",
     "categories": [
         "Programming Languages",
@@ -15,6 +15,7 @@
         "autocomplete"
     ],
     "publisher": "TomasHubelbauer",
+    "icon": "icon.png",
     "repository": {
         "type": "git",
         "url": "https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions.git"
@@ -45,7 +46,7 @@
         ]
     },
     "scripts": {
-        "vscode:prepublish": "npm run compile",
+        "vscode:prepublish": "npm run compile && cd src/icon && yarn && yarn start",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "postinstall": "node ./node_modules/vscode/bin/install",

@@ -1,5 +1,9 @@
 # Change Log
 
+## `9.0.1` (2018-07-29)
+
+- Add a crude, deterministic, generated icon for the VS Code extension marketplace
+
 ## `9.0.0` (2018-07-29)
 
 - Generate link URL fragments without periods in suggestions for MarkDown headers

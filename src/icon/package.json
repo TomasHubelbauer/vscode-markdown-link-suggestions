@@ -1,0 +1,14 @@
+{
+  "name": "icon",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "puppeteer": "^1.6.1",
+    "ts-node": "^7.0.0"
+  },
+  "scripts": {
+    "start": "ts-node index.ts",
+    "start:dev": "ts-node index.ts nonheadless"
+  }
+}
