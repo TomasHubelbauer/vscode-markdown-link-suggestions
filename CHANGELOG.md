@@ -1,5 +1,9 @@
 # Change Log
 
+## `9.0.2` (2018-07-29)
+
+- Fix icon so that it works on backgrounds of all shades
+
 ## `9.0.1` (2018-07-29)
 
 - Add a crude, deterministic, generated icon for the VS Code extension marketplace

@@ -12,8 +12,5 @@ void async function () {
   await page.screenshot({ omitBackground: true, path: '../../icon.png' });
   if (headless) {
     await window.close();
-  } else {
-    await page.$eval('body', (body: any) => body.classList.add('nonHeadless'));
-    // The user will close the window
   }
 }();
