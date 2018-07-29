@@ -94,7 +94,8 @@ class LinkDiagnosticProvider {
             if (link.uri.fragment !== '' && (await fsExtra.stat(absolutePath)).isFile()) {
                 let headerExists = false;
                 for (const { text } of getHeaders(await workspace.openTextDocument(absolutePath))) {
-                    if (anchorize(text) === link.uri.fragment) {
+                    // Remove periods in fragment because the extension used to not remove them and thus generated fragments which are now invalid
+                    if (anchorize(text) === link.uri.fragment.replace('.', '')) {
                         headerExists = true;
                         break;
                     }
@@ -373,7 +374,7 @@ function* getCodeBlockRanges(text: string) {
 }
 
 function anchorize(header: string) {
-    return header.toLowerCase().replace(/\s/g, '-');
+    return header.toLowerCase().replace(/\s/g, '-').replace(/\./g, '');
 }
 
 function resolvePath(textDocument: TextDocument, target: Uri) {

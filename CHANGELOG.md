@@ -1,17 +1,38 @@
 # Change Log
 
+## `9.0.0` (2018-07-29)
+
+- Generate link URL fragments without periods in suggestions for MarkDown headers
+  - URL fragments containing periods will still be accepted in diagnostics, so this doesn't break existing links
+
+### Thank You
+
+- @borekb: [#5](https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/5)
+
 ## `8.0.0` (2018-07-24)
 
 - Diagnose links for local path existence only for URLs with no scheme or explicit `file` scheme
+
+### Thank You
+
+- @dbobak: [#6](https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/6)
 
 ## `7.0.4` (2018-07-23)
 
 - Support triggering suggestions by the VS Code shortcut (Ctrl + Space by default)
   - Please be aware that this still only works after `(` (and `[` if enabled in settings)
 
+### Thank You
+
+- @borekb: [#4](https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/4)
+
 ## `7.0.3` (2018-07-19)
 
 - Do not recognized links in MarkDown inline code spans either.
+
+### Thank You
+
+- @borekb: [#1](https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/1)
 
 ## `7.0.2` (2018-07-19)
 
@@ -20,6 +41,10 @@
 ## `7.0.1` (2018-07-19)
 
 - Add a configuration setting for toggling suggestions for headers and default it to `true` (existing behavior)
+
+### Thank You
+
+- @insanetesterftw: [#3](https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/3)
 
 ## `7.0.0` (2018-07-19)
 
