@@ -181,8 +181,8 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
 
             items.push(this.item(CompletionItemKind.File, file.fsPath, null, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
             if (path.extname(file.fsPath).toUpperCase() === '.MD' && this.allowSuggestionsForHeaders) {
-                for (const { index, text } of getHeaders(await workspace.openTextDocument(file))) {
-                    items.push(this.item(CompletionItemKind.Reference, file.fsPath, { index, text }, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
+                for (const { order, text } of getHeaders(await workspace.openTextDocument(file))) {
+                    items.push(this.item(CompletionItemKind.Reference, file.fsPath, { order, text }, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
                 }
             }
         }
@@ -203,7 +203,7 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
         return items;
     }
 
-    private item(kind: CompletionItemKind, absoluteFilePath: string, header: { index: number; text: string; } | null, absoluteDocumentDirectoryPath: string, fullSuggestMode: boolean, fullSuggestModeBraceCompleted: boolean, partialSuggestModeBraceCompleted: boolean, braceCompletionRange: Range) {
+    private item(kind: CompletionItemKind, absoluteFilePath: string, header: { order: number; text: string; } | null, absoluteDocumentDirectoryPath: string, fullSuggestMode: boolean, fullSuggestModeBraceCompleted: boolean, partialSuggestModeBraceCompleted: boolean, braceCompletionRange: Range) {
         // Extract and join the file name with header (if any) for displaying in the label
         const fileName = path.basename(absoluteFilePath);
         let fileNameWithHeader = fileName;
@@ -225,16 +225,16 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
         // Display expanded and normalized absolute path for inspection
         item.documentation = path.normalize(absoluteFilePath);
         // Derive anchorized version of the header to ensure working linkage
-        const anchor = header === null ? '' : '#' + anchorize(header.text);
+        const anchor = header === null ? '' : anchorize(header.text);
         // Compute suggested file path relative to the currently edited file's directory path
         let relativeFilePath = path.relative(absoluteDocumentDirectoryPath, absoluteFilePath);
         // TODO: URL encode path minimally (to make VS Code work, like replacing + sign and other otherwise linkage breaking characters)
         relativeFilePath = relativeFilePath; // TODO
         // Insert either relative file path with anchor only or file name without anchor in the MarkDown link syntax if in full suggest mode
         if (fullSuggestMode) {
-            item.insertText = `${fileName}](${relativeFilePath}${anchor})`;
+            item.insertText = `${fileName}](${relativeFilePath}${anchor ? '#' + anchor : ''})`;
         } else {
-            item.insertText = relativeFilePath + anchor;
+            item.insertText = anchor ? relativeFilePath + '#' + anchor : relativeFilePath;
             if (!partialSuggestModeBraceCompleted) {
                 item.insertText += ')';
             }
@@ -245,7 +245,8 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
         item.sortText = relativeFilePath; // TODO
         if (header !== null) {
             // Sort headers in the document order
-            item.sortText += header.index.toString().padStart(5, '0');
+            item.sortText += '#';
+            item.sortText += header.order.toString().padStart(5, '0');
             item.sortText += anchor;
         }
 
@@ -280,6 +281,7 @@ class LinkDocumentLinkProvider implements DocumentLinkProvider {
 // }
 
 function* getHeaders(textDocument: TextDocument) {
+    let order = 0;
     for (let index = 0; index < textDocument.lineCount; index++) {
         const line = textDocument.lineAt(index);
         if (!line.text.startsWith('#')) {
@@ -314,7 +316,8 @@ function* getHeaders(textDocument: TextDocument) {
             }
         }
 
-        yield { index, text };
+        order++;
+        yield { order, text };
     }
 }
 

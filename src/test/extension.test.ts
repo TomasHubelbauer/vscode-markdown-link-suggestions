@@ -6,6 +6,7 @@ import * as fsExtra from 'fs-extra';
 
 // NOTE: Workspace is `out/test` so suggestions are from those files
 // TODO: Add tests for full suggest mode and header suggestions configuration settings
+// TODO: Add tests for no dash and dash header links
 suite("Extension Tests", function () {
 
     const token = new CancellationTokenSource().token;
@@ -27,40 +28,46 @@ suite("Extension Tests", function () {
         });
         await commands.executeCommand('workbench.action.closeActiveEditor');
 
-        checkItem(
-            findItem(items!, CompletionItemKind.File, 'README.md'),
-            'README.md',
-            '/out/test/README.md',
-            'README.md](../out/test/README.md)',
-            'README.md (../out/test)',
-        );
+        const fileItem = findItem(items!, CompletionItemKind.File, 'README.md');
+        assert.equal(fileItem.detail, 'README.md');
+        assert.equal(normalizePath(fileItem.documentation! as string).endsWith('/out/test/README.md'), true);
+        assert.equal(fileItem.filterText!.split(',').length, 2);
+        assert.equal(fileItem.filterText!.split(',')[0].endsWith('/out/test/README.md'), true);
+        assert.equal(fileItem.filterText!.split(',')[1].endsWith('/out/test/README.md'.replace(/\//g, '\\')), true);
+        assert.equal(normalizePath(fileItem.insertText! as string), 'README.md](../out/test/README.md)');
+        assert.equal(normalizePath(fileItem.label), 'README.md (../out/test)');
+        assert.equal(normalizePath(fileItem.sortText!), '..' + '/out/test/README.md');
 
-        checkItem(
-            findItem(items!, CompletionItemKind.Reference, 'Test'),
-            'Test',
-            '/out/test/README.md',
-            'README.md](../out/test/README.md#test)',
-            'README.md # Test (../out/test)',
-            '00000test'
-        );
+        const referenceItemHeader = findItem(items!, CompletionItemKind.Reference, 'Test');
+        assert.equal(referenceItemHeader.detail, 'Test');
+        assert.equal(normalizePath(referenceItemHeader.documentation! as string).endsWith('/out/test/README.md'), true);
+        assert.equal(referenceItemHeader.filterText!.split(',').length, 2);
+        assert.equal(referenceItemHeader.filterText!.split(',')[0].endsWith('/out/test/README.md'), true);
+        assert.equal(referenceItemHeader.filterText!.split(',')[1].endsWith('/out/test/README.md'.replace(/\//g, '\\')), true);
+        assert.equal(normalizePath(referenceItemHeader.insertText! as string), 'README.md](../out/test/README.md#test)');
+        assert.equal(normalizePath(referenceItemHeader.label), 'README.md # Test (../out/test)');
+        assert.equal(normalizePath(referenceItemHeader.sortText!), '..' + '/out/test/README.md#00001test');
 
-        checkItem(
-            findItem(items!, CompletionItemKind.Reference, 'Header 1'),
-            'Header 1',
-            '/out/test/README.md',
-            'README.md](../out/test/README.md#header-1)',
-            'README.md # Header 1 (../out/test)',
-            '00001header-1'
-        );
+        const referenceItemHeaderSpace = findItem(items!, CompletionItemKind.Reference, 'Header 1');
+        assert.equal(referenceItemHeaderSpace.detail, 'Header 1');
+        assert.equal(normalizePath(referenceItemHeaderSpace.documentation! as string).endsWith('/out/test/README.md'), true);
+        assert.equal(referenceItemHeaderSpace.filterText!.split(',').length, 2);
+        assert.equal(referenceItemHeaderSpace.filterText!.split(',')[0].endsWith('/out/test/README.md'), true);
+        assert.equal(referenceItemHeaderSpace.filterText!.split(',')[1].endsWith('/out/test/README.md'.replace(/\//g, '\\')), true);
+        assert.equal(normalizePath(referenceItemHeaderSpace.insertText! as string), 'README.md](../out/test/README.md#header-1)');
+        assert.equal(normalizePath(referenceItemHeaderSpace.label), 'README.md # Header 1 (../out/test)');
+        assert.equal(normalizePath(referenceItemHeaderSpace.sortText!), '..' + '/out/test/README.md#00002header-1');
 
-        checkItem(
-            findItem(items!, CompletionItemKind.Folder, 'test'),
-            'test',
-            '/out/test',
-            'test](../out/test)',
-            'test (../out)',
-        );
-    }).timeout(5000);
+        const folderItem = findItem(items!, CompletionItemKind.Folder, 'test');
+        assert.equal(folderItem.detail, 'test');
+        assert.equal(normalizePath(folderItem.documentation! as string).endsWith('/out/test'), true);
+        assert.equal(folderItem.filterText!.split(',').length, 2);
+        assert.equal(folderItem.filterText!.split(',')[0].endsWith('/out/test'), true);
+        assert.equal(folderItem.filterText!.split(',')[1].endsWith('/out/test'.replace(/\//g, '\\')), true);
+        assert.equal(normalizePath(folderItem.insertText! as string), 'test](../out/test)');
+        assert.equal(normalizePath(folderItem.label), 'test (../out)');
+        assert.equal(normalizePath(folderItem.sortText!), '..' + '/out/test');
+    }).timeout(15000);
 
     test("Suggest at (", async function () {
         await fsExtra.writeFile(path.resolve(__dirname, 'README.md'), '# Test\n\n## Header 1\n\n## Header 2\n');
@@ -80,53 +87,52 @@ suite("Extension Tests", function () {
             triggerCharacter,
         });
 
-        checkItem(
-            findItem(items!, CompletionItemKind.File, 'README.md'),
-            'README.md',
-            '/out/test/README.md',
-            '../out/test/README.md)',
-            'README.md (../out/test)',
-        );
+        const fileItem = findItem(items!, CompletionItemKind.File, 'README.md');
+        assert.equal(fileItem.detail, 'README.md');
+        assert.equal(normalizePath(fileItem.documentation! as string).endsWith('/out/test/README.md'), true);
+        assert.equal(fileItem.filterText!.split(',').length, 2);
+        assert.equal(fileItem.filterText!.split(',')[0].endsWith('/out/test/README.md'), true);
+        assert.equal(fileItem.filterText!.split(',')[1].endsWith('/out/test/README.md'.replace(/\//g, '\\')), true);
+        assert.equal(normalizePath(fileItem.insertText! as string), '../out/test/README.md)');
+        assert.equal(normalizePath(fileItem.label), 'README.md (../out/test)');
+        assert.equal(normalizePath(fileItem.sortText!), '..' + '/out/test/README.md');
 
-        checkItem(
-            findItem(items!, CompletionItemKind.Reference, 'Test'),
-            'Test',
-            '/out/test/README.md',
-            '../out/test/README.md#test)',
-            'README.md # Test (../out/test)',
-            '00000test'
-        );
+        const referenceItemHeader = findItem(items!, CompletionItemKind.Reference, 'Test');
+        assert.equal(referenceItemHeader.detail, 'Test');
+        assert.equal(normalizePath(referenceItemHeader.documentation! as string).endsWith('/out/test/README.md'), true);
+        assert.equal(referenceItemHeader.filterText!.split(',').length, 2);
+        assert.equal(referenceItemHeader.filterText!.split(',')[0].endsWith('/out/test/README.md'), true);
+        assert.equal(referenceItemHeader.filterText!.split(',')[1].endsWith('/out/test/README.md'.replace(/\//g, '\\')), true);
+        assert.equal(normalizePath(referenceItemHeader.insertText! as string), '../out/test/README.md#test)');
+        assert.equal(normalizePath(referenceItemHeader.label), 'README.md # Test (../out/test)');
+        assert.equal(normalizePath(referenceItemHeader.sortText!), '..' + '/out/test/README.md#00001test');
 
-        checkItem(
-            findItem(items!, CompletionItemKind.Reference, 'Header 1'),
-            'Header 1',
-            '/out/test/README.md',
-            '../out/test/README.md#header-1)',
-            'README.md # Header 1 (../out/test)',
-            '00001header-1'
-        );
+        const referenceItemHeaderSpace = findItem(items!, CompletionItemKind.Reference, 'Header 1');
+        assert.equal(referenceItemHeaderSpace.detail, 'Header 1');
+        assert.equal(normalizePath(referenceItemHeaderSpace.documentation! as string).endsWith('/out/test/README.md'), true);
+        assert.equal(referenceItemHeaderSpace.filterText!.split(',').length, 2);
+        assert.equal(referenceItemHeaderSpace.filterText!.split(',')[0].endsWith('/out/test/README.md'), true);
+        assert.equal(referenceItemHeaderSpace.filterText!.split(',')[1].endsWith('/out/test/README.md'.replace(/\//g, '\\')), true);
+        assert.equal(normalizePath(referenceItemHeaderSpace.insertText! as string), '../out/test/README.md#header-1)');
+        assert.equal(normalizePath(referenceItemHeaderSpace.label), 'README.md # Header 1 (../out/test)');
+        assert.equal(normalizePath(referenceItemHeaderSpace.sortText!), '..' + '/out/test/README.md#00002header-1');
 
-        checkItem(
-            findItem(items!, CompletionItemKind.Folder, 'test'),
-            'test',
-            '/out/test',
-            '../out/test)',
-            'test (../out)'
-        );
-    }).timeout(5000);
+        const folderItem = findItem(items!, CompletionItemKind.Folder, 'test');
+        assert.equal(folderItem.detail, 'test');
+        assert.equal(normalizePath(folderItem.documentation! as string).endsWith('/out/test'), true);
+        assert.equal(folderItem.filterText!.split(',').length, 2);
+        assert.equal(folderItem.filterText!.split(',')[0].endsWith('/out/test'), true);
+        assert.equal(folderItem.filterText!.split(',')[1].endsWith('/out/test'.replace(/\//g, '\\')), true);
+        assert.equal(normalizePath(folderItem.insertText! as string), '../out/test)');
+        assert.equal(normalizePath(folderItem.label), 'test (../out)');
+        assert.equal(normalizePath(folderItem.sortText!), '..' + '/out/test');
+    }).timeout(15000);
 });
 
 function findItem(items: CompletionItem[], kind: CompletionItemKind, detail: string) {
     return items.find(item => item.kind === kind && item.detail === detail)!;
 }
 
-function checkItem(item: CompletionItem, detail: string, documentationAndFilterAndSortEndsWith: string, insertText: string, label: string, anchor?: string) {
-    assert.equal(item.detail, detail);
-    assert.equal((item.documentation! as string).replace(/\\/g, '/').endsWith(documentationAndFilterAndSortEndsWith), true);
-    assert.equal(item.filterText!.split(',').length, 2);
-    assert.equal(item.filterText!.split(',')[0].endsWith(documentationAndFilterAndSortEndsWith), true);
-    assert.equal(item.filterText!.split(',')[1].endsWith(documentationAndFilterAndSortEndsWith.replace(/\//g, '\\')), true);
-    assert.equal((item.insertText! as string).replace(/\\/g, '/'), insertText);
-    assert.equal(item.label.replace(/\\/g, '/'), label);
-    assert.equal(item.sortText!.replace(/\\/g, '/'), '..' + documentationAndFilterAndSortEndsWith + (anchor || ''));
+function normalizePath(path: string) {
+    return path.replace(/\\/g, '/');
 }
