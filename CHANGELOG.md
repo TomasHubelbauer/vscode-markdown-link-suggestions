@@ -1,5 +1,10 @@
 # Change Log
 
+## `9.0.3` (2018-08-11)
+
+- Fix an issue where a link in a checkbox would incorrectly highlight the whole checkbox line (e.g.: `- [ ] Do [a task](task.md)` would highlight within the first `[` and the last `]`)
+- Fix an issue where links in inline code spans weren't ignored unless they were the only thing with the backticks (so `task: [task](task.md)` would not get ignored)
+
 ## `9.0.2` (2018-07-29)
 
 - Fix icon so that it works on backgrounds of all shades

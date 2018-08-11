@@ -7,12 +7,19 @@ import * as fsExtra from 'fs-extra';
 // NOTE: Workspace is `out/test` so suggestions are from those files
 // TODO: Add tests for full suggest mode and header suggestions configuration settings
 // TODO: Add tests for no dash and dash header links
+// TODO: Add tests for link provider adn ignoring links in code blocks and inline code spans
 suite("Extension Tests", function () {
 
     const token = new CancellationTokenSource().token;
 
     test("Suggest at [", async function () {
-        await fsExtra.writeFile(path.resolve(__dirname, 'README.md'), '# Test\n\n## Header 1\n\n## Header 2\n');
+        await fsExtra.writeFile(path.resolve(__dirname, 'README.md'), `
+# Test
+
+## Header 1
+
+## Header 2
+`);
         const filePath = path.resolve(__dirname, /* out/test */'../../demo/README.md');
         const textDocument = await workspace.openTextDocument(filePath);
         const textEditor = await window.showTextDocument(textDocument);
@@ -70,7 +77,13 @@ suite("Extension Tests", function () {
     }).timeout(15000);
 
     test("Suggest at (", async function () {
-        await fsExtra.writeFile(path.resolve(__dirname, 'README.md'), '# Test\n\n## Header 1\n\n## Header 2\n');
+        await fsExtra.writeFile(path.resolve(__dirname, 'README.md'), `
+# Test
+
+## Header 1
+
+## Header 2
+`);
         const filePath = path.resolve(__dirname, /* out/test */'../../demo/README.md');
         const textDocument = await workspace.openTextDocument(filePath);
         const textEditor = await window.showTextDocument(textDocument);

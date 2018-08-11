@@ -83,7 +83,7 @@ class LinkDiagnosticProvider {
     private async /* `*`diag */diag(textDocument: TextDocument)/*: AsyncIterableIterator<Diagnostic> */ {
         // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
         const diags: Diagnostic[] = [];
-        for (const link of getLinks(textDocument)) {
+        for (const link of getFileLinks(textDocument)) {
             const absolutePath = resolvePath(textDocument, link.uri);
             if (!await fsExtra.pathExists(absolutePath)) {
                 // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
@@ -263,7 +263,7 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
 
 class LinkDocumentLinkProvider implements DocumentLinkProvider {
     provideDocumentLinks(document: TextDocument, token: CancellationToken): DocumentLink[] {
-        return [...getLinks(document)].map(({ text, textRange, uri }) => {
+        return [...getFileLinks(document)].map(({ text, textRange, uri }) => {
             return new DocumentLink(textRange, Uri.file(resolvePath(document, uri)));
         });
     }
@@ -321,58 +321,52 @@ function* getHeaders(textDocument: TextDocument) {
     }
 }
 
-function* getLinks(textDocument: TextDocument) {
-    const text = textDocument.getText();
-    const codeBlockRanges = [...getCodeBlockRanges(text)];
-    const regex = /[^`](?:__|[*#])|\[(.*?)\]\((.*?)\)[^`]/gm;
-    let match: RegExpExecArray | null;
-    // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
-    while ((match = regex.exec(text)) !== null) {
-        if (codeBlockRanges.some(range => range.start <= match!.index && range.end >= match!.index)) {
+function* getFileLinks(textDocument: TextDocument) {
+    let isInCodeBlock = false;
+    for (let index = 0; index < textDocument.lineCount; index++) {
+        const line = textDocument.lineAt(index);
+
+        // TODO: Replace this logic with MarkDownDOM when ready
+        if (line.text.trim().startsWith('```')) {
+            isInCodeBlock = !isInCodeBlock;
             continue;
         }
 
-        const text = match[1];
-        const target = match[2];
-        if (text === undefined || target === undefined) {
+        if (isInCodeBlock) {
             continue;
         }
 
-        const uri = Uri.parse(target);
-        if (uri.scheme && uri.scheme !== 'file') {
-            continue;
+        // TODO: Get rid of these hack by MarkDownDOM when ready
+        const text = line.text
+            // Do not confuse the regex by checkboxes by blanking them out
+            .replace(/\[[ xX]\](.?)/g, '   $1')
+            // Do not consufe the regex by inline code spans by blacking them out
+            .replace(/`[^`]*`/g, match => ' '.repeat(match.length))
+            ;
+
+        const regex = /\[(.*)\]\((.*)\)/g;
+        let match: RegExpExecArray | null;
+        // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
+        while ((match = regex.exec(text)) !== null) {
+            const text = match[1];
+            const target = match[2];
+            if (text === undefined || target === undefined) {
+                continue;
+            }
+
+            const uri = Uri.parse(target);
+            if (uri.scheme && uri.scheme !== 'file') {
+                continue;
+            }
+
+            const textPosition = new Position(index, match.index + 1 /* [ */);
+            const textRange = new Range(textPosition, textPosition.translate(0, text.length));
+
+            const uriPosition = new Position(index, match.index + 1 /* [ */ + text.length + 2 /* ]( */);
+            const uriRange = new Range(uriPosition, uriPosition.translate(0, target.length));
+
+            yield { text, textRange, uri, uriRange };
         }
-
-        const textRange = new Range(
-            textDocument.positionAt(match.index).translate(0, 1 /* `[` */),
-            textDocument.positionAt(match.index).translate(0, 1 /* `[` */ + text.length)
-        );
-
-        const uriRange = new Range(
-            textDocument.positionAt(match.index).translate(0, 1 + text.length + 2 /* `[` + text + `](` */),
-            textDocument.positionAt(match.index).translate(0, 1 + text.length + 2 /* `[` + text + `](` */ + target.length)
-        );
-
-        yield { text, textRange, uri, uriRange };
-    }
-}
-
-function* getCodeBlockRanges(text: string) {
-    let tempIndex: number | null = null;
-    const regex = /^```/gm;
-    let match: RegExpExecArray | null;
-
-    while ((match = regex.exec(text)) !== null) {
-        if (tempIndex === null) {
-            tempIndex = match.index;
-        } else {
-            yield { start: tempIndex, end: match.index };
-            tempIndex = null;
-        }
-    }
-
-    if (tempIndex !== null) {
-        yield { start: tempIndex, end: text.length };
     }
 }
 
