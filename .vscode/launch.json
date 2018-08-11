@@ -27,7 +27,6 @@
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}",
                 "--extensionTestsPath=${workspaceFolder}/out/test",
-                "--inspect=4567",
                 "${workspaceFolder}/demo"
             ],
             "outFiles": [

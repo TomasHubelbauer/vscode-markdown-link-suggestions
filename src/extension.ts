@@ -141,6 +141,7 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
         if (fullSuggestMode) {
             fullSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ']';
         } else {
+            // TODO: Handle a case where there is only '(' on the line
             const linkConfirmationRange = new Range(position.translate(0, -2), position);
             if (character === '(') {
                 if (document.getText(linkConfirmationRange) === '](') {
@@ -227,7 +228,7 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
         // Derive anchorized version of the header to ensure working linkage
         const anchor = header === null ? '' : anchorize(header.text);
         // Compute suggested file path relative to the currently edited file's directory path
-        let relativeFilePath = path.relative(absoluteDocumentDirectoryPath, absoluteFilePath);
+        let relativeFilePath = path.relative(absoluteDocumentDirectoryPath, absoluteFilePath) || '.';
         // TODO: URL encode path minimally (to make VS Code work, like replacing + sign and other otherwise linkage breaking characters)
         relativeFilePath = relativeFilePath; // TODO
         // Insert either relative file path with anchor only or file name without anchor in the MarkDown link syntax if in full suggest mode
@@ -245,9 +246,7 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
         item.sortText = relativeFilePath; // TODO
         if (header !== null) {
             // Sort headers in the document order
-            item.sortText += '#';
-            item.sortText += header.order.toString().padStart(5, '0');
-            item.sortText += anchor;
+            item.sortText += ` ${header.order.toString().padStart(5, '0')} # ${header.text}`;
         }
 
         // Offer both forwards slash and backwards slash filter paths so that the user can type regardless of the platform
@@ -261,7 +260,7 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
     }
 }
 
-class LinkDocumentLinkProvider implements DocumentLinkProvider {
+export class LinkDocumentLinkProvider implements DocumentLinkProvider {
     provideDocumentLinks(document: TextDocument, token: CancellationToken): DocumentLink[] {
         return [...getFileLinks(document)].map(({ text, textRange, uri }) => {
             return new DocumentLink(textRange, Uri.file(resolvePath(document, uri)));
