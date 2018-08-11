@@ -14,7 +14,7 @@ export function activate(context: ExtensionContext) {
     const markDownDocumentSelector = { scheme: 'file', language: 'markdown' };
     const { allowFullSuggestMode, allowSuggestionsForHeaders } = workspace.getConfiguration('markdown-link-suggestions');
     const linkCompletionItemProvider = new LinkCompletionItemProvider(allowFullSuggestMode, allowSuggestionsForHeaders);
-    context.subscriptions.push(languages.registerCompletionItemProvider(markDownDocumentSelector, linkCompletionItemProvider, '[', '('));
+    context.subscriptions.push(languages.registerCompletionItemProvider(markDownDocumentSelector, linkCompletionItemProvider, '[', '(', '#'));
     context.subscriptions.push(new LinkDiagnosticProvider());
 
 
@@ -129,11 +129,15 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
 
     async provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken, context: CompletionContext) {
         const character = context.triggerCharacter || /* Ctrl + Space */ document.getText(new Range(position.translate(0, -1), position));
+
         // TODO: Extend to be able to handle suggestions after backspacing (see if this fires but we already have some text)
         const fullSuggestMode = character === '[';
         if (fullSuggestMode && !this.allowFullSuggestMode) {
             return;
         }
+
+        const documentDirectoryPath = path.dirname(document.uri.fsPath);
+        const items: CompletionItem[] = [];
 
         let fullSuggestModeBraceCompleted = false;
         let partialSuggestModeBraceCompleted = false;
@@ -152,12 +156,22 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
                     return;
                 }
             } else {
-                // Bail if we are in neither full suggest mode nor partial (link target) suggest mode
-                return;
+                const headerLinkConfirmationRange = new Range(position.translate(0, -3), position);
+                // TODO: Integrate this in a bit nicer if possible
+                if (character === '#' && document.getText(headerLinkConfirmationRange) === '](#') {
+                    partialSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ')';
+                    // Only suggest local file headers
+                    for (const header of getHeaders(document)) {
+                        items.push(this.item(CompletionItemKind.Reference, document.uri.fsPath, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange, true));
+                    }
+
+                    return items;
+                } else {
+                    // Bail if we are in neither full suggest mode nor partial (link target) suggest mode nor header mode
+                    return;
+                }
             }
         }
-
-        const documentDirectoryPath = path.dirname(document.uri.fsPath);
 
         // TODO: https://github.com/TomasHubelbauer/vscode-extension-findFilesWithExcludes
         // TODO: https://github.com/Microsoft/vscode/issues/48674
@@ -173,8 +187,6 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
 
         // Accept only files not excluded in any of the globs
         const files = Object.keys(occurences).filter(fsPath => occurences[fsPath] === globs.length).map(file => Uri.file(file));
-
-        const items: CompletionItem[] = [];
         for (const file of files) {
             if (file.scheme !== 'file') {
                 return;
@@ -204,12 +216,12 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
         return items;
     }
 
-    private item(kind: CompletionItemKind, absoluteFilePath: string, header: { order: number; text: string; } | null, absoluteDocumentDirectoryPath: string, fullSuggestMode: boolean, fullSuggestModeBraceCompleted: boolean, partialSuggestModeBraceCompleted: boolean, braceCompletionRange: Range) {
+    private item(kind: CompletionItemKind, absoluteFilePath: string, header: { order: number; text: string; } | null, absoluteDocumentDirectoryPath: string, fullSuggestMode: boolean, fullSuggestModeBraceCompleted: boolean, partialSuggestModeBraceCompleted: boolean, braceCompletionRange: Range, hack?: boolean) {
         // Extract and join the file name with header (if any) for displaying in the label
         const fileName = path.basename(absoluteFilePath);
         let fileNameWithHeader = fileName;
         if (header !== null) {
-            fileNameWithHeader += ' # ' + header.text;
+            fileNameWithHeader = hack ? header.text : (fileNameWithHeader + ' # ' + header.text);
         }
 
         // Put together a label in a `name#header (directory if not current)` format
@@ -235,7 +247,8 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
         if (fullSuggestMode) {
             item.insertText = `${fileName}](${relativeFilePath}${anchor ? '#' + anchor : ''})`;
         } else {
-            item.insertText = anchor ? relativeFilePath + '#' + anchor : relativeFilePath;
+            item.insertText = hack ? anchor : (anchor ? relativeFilePath + '#' + anchor : relativeFilePath);
+
             if (!partialSuggestModeBraceCompleted) {
                 item.insertText += ')';
             }

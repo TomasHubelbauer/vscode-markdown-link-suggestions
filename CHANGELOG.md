@@ -1,5 +1,13 @@
 # Change Log
 
+## `10.0.0` (2018-08-11)
+
+- Add a mode where typing `#` after `](` (so `](#`) will suggest only local file headers, this should help with use-cases where performance issues prevent use on big repos
+
+### Thank You
+
+- @borekb: [#8](https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/8)
+
 ## `9.0.3` (2018-08-11)
 
 - Fix an issue where a link in a checkbox would incorrectly highlight the whole checkbox line (e.g.: `- [ ] Do [a task](task.md)` would highlight within the first `[` and the last `]`)
