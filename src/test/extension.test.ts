@@ -90,6 +90,7 @@ suite("Extension Tests", async function () {
                 ))!;
 
                 assert.ok(items);
+                console.log(JSON.stringify(items));
                 assert.equal(items.length, 16);
 
                 // Keep this separate so in case items are added or (re)moved and we don't need to rewrite all indices, we can just reorder code blocks
