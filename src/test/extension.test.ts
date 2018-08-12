@@ -90,19 +90,64 @@ suite("Extension Tests", async function () {
                 ))!;
 
                 assert.ok(items);
-                console.log(JSON.stringify(items));
                 assert.equal(items.length, 16);
+
+                // Sort items by sort text because by default the order is based on file system enumeration which is not portable
+                items.sort((a, b) => a.sortText!.toString().localeCompare(b.sortText!.toString()));
 
                 // Keep this separate so in case items are added or (re)moved and we don't need to rewrite all indices, we can just reorder code blocks
                 let index = -1;
 
-                assert.equal(items[++index].insertText, fullMode ? 'extension.test.js](extension.test.js)' : 'extension.test.js)');
-                assert.equal(items[++index].insertText, fullMode ? 'extension.test.js.map](extension.test.js.map)' : 'extension.test.js.map)');
-                assert.equal(items[++index].insertText, fullMode ? 'index.js](index.js)' : 'index.js)');
-                assert.equal(items[++index].insertText, fullMode ? 'index.js.map](index.js.map)' : 'index.js.map)');
-
                 //console.log(++index, items[index--]);
                 //console.log(items.map(item => item.insertText));
+
+                assert.equal(items[++index].kind, CompletionItemKind.Folder);
+                assert.equal(items[index].insertText, fullMode ? 'test](.)' : '.)');
+                assert.equal(items[index].sortText, '.');
+                assert.equal(items[index].detail, 'test');
+                assert.equal(items[index].label, 'test (..)');
+                assert.equal(items[index].documentation, workspaceDirectoryPath);
+                assert.ok(items[index].filterText!.includes(workspaceDirectoryPath));
+
+                assert.equal(items[++index].insertText, fullMode ? 'extension.test.js](extension.test.js)' : 'extension.test.js)');
+
+                assert.equal(items[++index].insertText, fullMode ? 'extension.test.js.map](extension.test.js.map)' : 'extension.test.js.map)');
+
+                assert.equal(items[++index].insertText, fullMode ? 'index.js](index.js)' : 'index.js)');
+
+                assert.equal(items[++index].insertText, fullMode ? 'index.js.map](index.js.map)' : 'index.js.map)');
+
+                assert.equal(items[++index].kind, CompletionItemKind.Folder);
+                assert.equal(items[index].insertText, fullMode ? 'nested](nested)' : 'nested)');
+                assert.equal(items[index].sortText, 'nested');
+                assert.equal(items[index].detail, 'nested');
+                assert.equal(items[index].label, 'nested');
+                assert.equal(items[index].documentation, nestedDirectoryPath);
+                assert.ok(items[index].filterText!.includes(nestedDirectoryPath));
+
+                assert.equal(items[++index].kind, CompletionItemKind.File);
+                assert.equal(items[index].insertText, fullMode ? `test.md](${nestedTestMdRelativeFilePath})` : `${nestedTestMdRelativeFilePath})`);
+                assert.equal(items[index].sortText, nestedTestMdRelativeFilePath);
+                assert.equal(items[index].detail, 'test.md');
+                assert.equal(items[index].label, 'test.md (nested)');
+                assert.equal(items[index].documentation, nestedTestMdAbsoluteFilePath);
+                assert.ok(items[index].filterText!.includes(nestedTestMdAbsoluteFilePath));
+
+                assert.equal(items[++index].kind, CompletionItemKind.Reference);
+                assert.equal(items[index].insertText, fullMode ? `test.md](${nestedTestMdRelativeFilePath}#nested-test)` : `${nestedTestMdRelativeFilePath}#nested-test)`);
+                assert.equal(items[index].sortText, nestedTestMdRelativeFilePath + ' 00001 # Nested Test');
+                assert.equal(items[index].detail, 'Nested Test');
+                assert.equal(items[index].label, 'test.md # Nested Test (nested)');
+                assert.equal(items[index].documentation, nestedTestMdAbsoluteFilePath);
+                assert.ok(items[index].filterText!.includes(nestedTestMdAbsoluteFilePath));
+
+                assert.equal(items[++index].kind, CompletionItemKind.Reference);
+                assert.equal(items[index].insertText, fullMode ? `test.md](${nestedTestMdRelativeFilePath}#nested-test-header)` : `${nestedTestMdRelativeFilePath}#nested-test-header)`);
+                assert.equal(items[index].sortText, nestedTestMdRelativeFilePath + ' 00002 # Nested Test Header');
+                assert.equal(items[index].detail, 'Nested Test Header');
+                assert.equal(items[index].label, 'test.md # Nested Test Header (nested)');
+                assert.equal(items[index].documentation, nestedTestMdAbsoluteFilePath);
+                assert.ok(items[index].filterText!.includes(nestedTestMdAbsoluteFilePath));
 
                 assert.equal(items[++index].kind, CompletionItemKind.File);
                 assert.equal(items[index].insertText, fullMode ? 'README.md](README.md)' : 'README.md)');
@@ -159,46 +204,6 @@ suite("Extension Tests", async function () {
                 assert.equal(items[index].label, 'test.md # Test Header');
                 assert.equal(items[index].documentation, testMdFilePath);
                 assert.ok(items[index].filterText!.includes(testMdFilePath));
-
-                assert.equal(items[++index].kind, CompletionItemKind.File);
-                assert.equal(items[index].insertText, fullMode ? `test.md](${nestedTestMdRelativeFilePath})` : `${nestedTestMdRelativeFilePath})`);
-                assert.equal(items[index].sortText, nestedTestMdRelativeFilePath);
-                assert.equal(items[index].detail, 'test.md');
-                assert.equal(items[index].label, 'test.md (nested)');
-                assert.equal(items[index].documentation, nestedTestMdAbsoluteFilePath);
-                assert.ok(items[index].filterText!.includes(nestedTestMdAbsoluteFilePath));
-
-                assert.equal(items[++index].kind, CompletionItemKind.Reference);
-                assert.equal(items[index].insertText, fullMode ? `test.md](${nestedTestMdRelativeFilePath}#nested-test)` : `${nestedTestMdRelativeFilePath}#nested-test)`);
-                assert.equal(items[index].sortText, nestedTestMdRelativeFilePath + ' 00001 # Nested Test');
-                assert.equal(items[index].detail, 'Nested Test');
-                assert.equal(items[index].label, 'test.md # Nested Test (nested)');
-                assert.equal(items[index].documentation, nestedTestMdAbsoluteFilePath);
-                assert.ok(items[index].filterText!.includes(nestedTestMdAbsoluteFilePath));
-
-                assert.equal(items[++index].kind, CompletionItemKind.Reference);
-                assert.equal(items[index].insertText, fullMode ? `test.md](${nestedTestMdRelativeFilePath}#nested-test-header)` : `${nestedTestMdRelativeFilePath}#nested-test-header)`);
-                assert.equal(items[index].sortText, nestedTestMdRelativeFilePath + ' 00002 # Nested Test Header');
-                assert.equal(items[index].detail, 'Nested Test Header');
-                assert.equal(items[index].label, 'test.md # Nested Test Header (nested)');
-                assert.equal(items[index].documentation, nestedTestMdAbsoluteFilePath);
-                assert.ok(items[index].filterText!.includes(nestedTestMdAbsoluteFilePath));
-
-                assert.equal(items[++index].kind, CompletionItemKind.Folder);
-                assert.equal(items[index].insertText, fullMode ? 'test](.)' : '.)');
-                assert.equal(items[index].sortText, '.');
-                assert.equal(items[index].detail, 'test');
-                assert.equal(items[index].label, 'test (..)');
-                assert.equal(items[index].documentation, workspaceDirectoryPath);
-                assert.ok(items[index].filterText!.includes(workspaceDirectoryPath));
-
-                assert.equal(items[++index].kind, CompletionItemKind.Folder);
-                assert.equal(items[index].insertText, fullMode ? 'nested](nested)' : 'nested)');
-                assert.equal(items[index].sortText, 'nested');
-                assert.equal(items[index].detail, 'nested');
-                assert.equal(items[index].label, 'nested');
-                assert.equal(items[index].documentation, nestedDirectoryPath);
-                assert.ok(items[index].filterText!.includes(nestedDirectoryPath));
 
                 await commands.executeCommand('workbench.action.closeActiveEditor');
             }
