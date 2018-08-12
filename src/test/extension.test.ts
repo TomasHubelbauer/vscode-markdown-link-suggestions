@@ -10,7 +10,6 @@ import * as fsExtra from 'fs-extra';
 suite("Extension Tests", async function () {
     assert.ok(workspace.workspaceFolders);
 
-    const timeout = 15000;
     const token = new CancellationTokenSource().token;
     const workspaceDirectoryPath = workspace.workspaceFolders![0].uri.fsPath;
     const readmeMdFilePath = path.join(workspaceDirectoryPath, 'README.md');
@@ -54,9 +53,9 @@ suite("Extension Tests", async function () {
             await commands.executeCommand('workbench.action.closeActiveEditor');
             await fsExtra.remove(readmeMdFilePath);
         }
-    }).timeout(timeout);
+    });
 
-    test('LinkCompletionItemProvider [', async function () {
+    test('LinkCompletionItemProvider', async function () {
         try {
             await fsExtra.writeFile(readmeMdFilePath, `
 # Test
@@ -208,5 +207,5 @@ suite("Extension Tests", async function () {
             await fsExtra.remove(nestedTestMdAbsoluteFilePath);
             await fsExtra.emptyDir(nestedDirectoryPath);
         }
-    }).timeout(timeout);
+    });
 });
