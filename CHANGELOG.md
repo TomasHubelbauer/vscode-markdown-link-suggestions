@@ -1,5 +1,9 @@
 # Change Log
 
+## `10.0.1` (2018-08-15)
+
+- Fix a problem where two or more consecutive links on one line would be highlighted as one stretching from first to last
+
 ## `10.0.0` (2018-08-11)
 
 - Add a mode where typing `#` after `](` (so `](#`) will suggest only local file headers, this should help with use-cases where performance issues prevent use on big repos

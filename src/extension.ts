@@ -275,7 +275,7 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
 
 export class LinkDocumentLinkProvider implements DocumentLinkProvider {
     provideDocumentLinks(document: TextDocument, token: CancellationToken): DocumentLink[] {
-        return [...getFileLinks(document)].map(({ text, textRange, uri }) => {
+        return [...getFileLinks(document)].map(({ textRange, uri }) => {
             return new DocumentLink(textRange, Uri.file(resolvePath(document, uri)));
         });
     }
@@ -356,7 +356,7 @@ function* getFileLinks(textDocument: TextDocument) {
             .replace(/`[^`]*`/g, match => ' '.repeat(match.length))
             ;
 
-        const regex = /\[(.*)\]\((.*)\)/g;
+        const regex = /\[([^\]]*)\]\(([^\)]*)\)/g;
         let match: RegExpExecArray | null;
         // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
         while ((match = regex.exec(text)) !== null) {

@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { workspace, CancellationTokenSource, CompletionTriggerKind, window, commands, CompletionItemKind } from 'vscode';
+import { workspace, CancellationTokenSource, CompletionTriggerKind, window, commands, CompletionItemKind, Range } from 'vscode';
 import { LinkDocumentLinkProvider, LinkCompletionItemProvider } from '../extension';
 import * as path from 'path';
 import * as fsExtra from 'fs-extra';
@@ -18,7 +18,7 @@ suite("Extension Tests", async function () {
     const nestedTestMdRelativeFilePath = path.normalize('nested/test.md');
     const nestedTestMdAbsoluteFilePath = path.join(workspaceDirectoryPath, nestedTestMdRelativeFilePath);
 
-    test('LinkDocumentLinkProvider', async function () {
+    test('LinkDocumentLinkProvider', async () => {
         try {
             await fsExtra.writeFile(readmeMdFilePath, `
 [link](README.md)
@@ -30,32 +30,29 @@ suite("Extension Tests", async function () {
 [nolink](README.md)
 \`\`\`
 [nofilelink](custom:README.md)
+[link 1](README.md#1) & [link 2](README.md#2)
 `);
 
             const textDocument = await workspace.openTextDocument(readmeMdFilePath);
             await window.showTextDocument(textDocument);
             const links = new LinkDocumentLinkProvider().provideDocumentLinks(textDocument, token);
 
-            assert.equal(links.length, 2);
-
-            assert.equal(links[0].range.start.line, 1);
-            assert.equal(links[0].range.start.character, 1);
-            assert.equal(links[0].range.end.line, 1);
-            assert.equal(links[0].range.end.character, 5);
+            assert.equal(links.length, 4);
+            assert.ok(links[0].range.isEqual(new Range(1, 1, 1, 5)));
             assert.equal(path.normalize(links[0].target!.fsPath).toUpperCase(), path.normalize(readmeMdFilePath).toUpperCase());
-
-            assert.equal(links[1].range.start.line, 2);
-            assert.equal(links[1].range.start.character, 3);
-            assert.equal(links[1].range.end.line, 2);
-            assert.equal(links[1].range.end.character, 7);
+            assert.ok(links[1].range.isEqual(new Range(2, 3, 2, 7)));
             assert.equal(path.normalize(links[1].target!.fsPath).toUpperCase(), path.normalize(readmeMdFilePath).toUpperCase());
+            assert.ok(links[2].range.isEqual(new Range(10, 1, 10, 7)));
+            assert.equal(path.normalize(links[0].target!.fsPath).toUpperCase(), path.normalize(readmeMdFilePath).toUpperCase());
+            assert.ok(links[3].range.isEqual(new Range(10, 25, 10, 31)));
+            assert.equal(path.normalize(links[0].target!.fsPath).toUpperCase(), path.normalize(readmeMdFilePath).toUpperCase());
         } finally {
             await commands.executeCommand('workbench.action.closeActiveEditor');
             await fsExtra.remove(readmeMdFilePath);
         }
     });
 
-    test('LinkCompletionItemProvider', async function () {
+    test('LinkCompletionItemProvider', async () => {
         try {
             await fsExtra.writeFile(readmeMdFilePath, `
 # Test
