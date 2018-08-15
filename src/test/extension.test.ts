@@ -91,6 +91,7 @@ suite("Extension Tests", async function () {
 
                 // Sort items by sort text because by default the order is based on file system enumeration which is not portable
                 items.sort((a, b) => a.sortText!.toString().localeCompare(b.sortText!.toString()));
+                console.log(JSON.stringify(items, null, 2));
 
                 // Keep this separate so in case items are added or (re)moved and we don't need to rewrite all indices, we can just reorder code blocks
                 let index = -1;
