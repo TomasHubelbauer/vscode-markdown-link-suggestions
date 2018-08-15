@@ -87,11 +87,11 @@ suite("Extension Tests", async function () {
                 ))!;
 
                 assert.ok(items);
+                console.log(JSON.stringify(items, null, 2));
                 assert.equal(items.length, 16);
 
                 // Sort items by sort text because by default the order is based on file system enumeration which is not portable
                 items.sort((a, b) => a.sortText!.toString().localeCompare(b.sortText!.toString()));
-                console.log(JSON.stringify(items, null, 2));
 
                 // Keep this separate so in case items are added or (re)moved and we don't need to rewrite all indices, we can just reorder code blocks
                 let index = -1;
@@ -227,7 +227,7 @@ suite("Extension Tests", async function () {
             const textDocument = await workspace.openTextDocument(readmeMdFilePath);
             const textEditor = await window.showTextDocument(textDocument);
 
-            let diagnostics = await drainAsyncIterator(new LinkDiagnosticProvider().provideDiagnostics(textDocument));
+            let diagnostics = await drainAsyncIterator(new LinkDiagnosticProvider(true).provideDiagnostics(textDocument));
 
             assert.equal(diagnostics.length, 2);
 
@@ -245,7 +245,7 @@ suite("Extension Tests", async function () {
             });
             await textDocument.save();
 
-            diagnostics = await drainAsyncIterator(new LinkDiagnosticProvider().provideDiagnostics(textDocument));
+            diagnostics = await drainAsyncIterator(new LinkDiagnosticProvider(true).provideDiagnostics(textDocument));
             assert.equal(diagnostics.length, 0);
         } finally {
             await commands.executeCommand('workbench.action.closeActiveEditor');

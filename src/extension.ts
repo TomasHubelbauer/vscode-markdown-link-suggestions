@@ -38,8 +38,8 @@ export class LinkDiagnosticProvider {
     private readonly diagnosticCollection: DiagnosticCollection;
     private readonly watcher: FileSystemWatcher;
 
-    constructor() {
-        this.diagnosticCollection = languages.createDiagnosticCollection('MarkDown Links');
+    constructor(test: boolean = false) {
+        this.diagnosticCollection = languages.createDiagnosticCollection('MarkDown Links' + (test ? ' Test' : ''));
         this.watcher = workspace.createFileSystemWatcher('**/*.md');
 
         this.watcher.onDidChange(async uri => {
