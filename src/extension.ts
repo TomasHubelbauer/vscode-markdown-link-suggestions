@@ -26,11 +26,11 @@ export function activate(context: ExtensionContext) {
     languages.registerDocumentLinkProvider(markDownDocumentSelector, new LinkDocumentLinkProvider());
     languages.registerCodeActionsProvider(markDownDocumentSelector, new LinkCodeActionProvider());
 
-    commands.registerCommand('extension.createMissingFile', async (missingFilePath: string, reportingFilePath: string) => {
+    commands.registerCommand('extension.createMissingFile', async (missingFilePath: string, reportingDocumentUri: Uri) => {
         await fsExtra.writeFile(missingFilePath, '');
         // TODO: Unhack
-        const textDocument = await workspace.openTextDocument(Uri.parse(reportingFilePath));
-        (linkDiagnosticProvider as any).diagnosticCollection.set(Uri.parse(reportingFilePath), await drainAsyncIterator(linkDiagnosticProvider.provideDiagnostics(textDocument)));
+        const textDocument = await workspace.openTextDocument(reportingDocumentUri);
+        (linkDiagnosticProvider as any).diagnosticCollection.set(reportingDocumentUri, await drainAsyncIterator(linkDiagnosticProvider.provideDiagnostics(textDocument)));
     });
 
     workspace.onDidChangeConfiguration(event => {
@@ -95,7 +95,7 @@ export class LinkDiagnosticProvider {
                 diagnostic.source = 'MarkDown Link Suggestions';
                 // TODO: Similar enough path exists? Use `code` and suggest rewriting.
                 // TODO: Use `code` and suggest creating.
-                diagnostic.code = 'no-file\n' + absolutePath + '\n' + textDocument.uri.toString(); // TODO: Unhack this passage of path, do it somehow righter
+                diagnostic.code = 'no-file;' + absolutePath; // TODO: Unhack this passage of path, do it somehow righter
                 yield diagnostic;
             }
 
@@ -135,18 +135,12 @@ export class LinkCodeActionProvider implements CodeActionProvider {
                 continue;
             }
 
-            if (diagnostic.source === 'MarkDown Link Suggestions' && diagnostic.code) {
-                // TODO: Unhack
-                const values = diagnostic.code.toString().split('\n');
-                if (values[0] !== 'no-file') {
-                    continue;
-                }
-
-                const missingFilePath = values[1];
-                const reportingFilePath = values[2];
+            // TODO: Unhack
+            if (diagnostic.source === 'MarkDown Link Suggestions' && diagnostic.code && diagnostic.code.toString().startsWith('no-file;')) {
+                const filePath = diagnostic.code.toString().substr('no-file;'.length);
 
                 const codeAction = new CodeAction('Create the missing file', CodeActionKind.Empty);
-                codeAction.command = { title: '', command: 'extension.createMissingFile', tooltip: '', arguments: [missingFilePath, reportingFilePath] };
+                codeAction.command = { title: '', command: 'extension.createMissingFile', tooltip: '', arguments: [filePath, document.uri] };
 
                 codeActions.push(codeAction);
             }
