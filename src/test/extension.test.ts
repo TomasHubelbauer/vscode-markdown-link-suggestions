@@ -5,8 +5,6 @@ import * as path from 'path';
 import * as fsExtra from 'fs-extra';
 
 // TODO: Extend full/partial suggest mode with a check for the full mode disabling setting
-// TODO: Add tests for a period in anchor
-// TODO: Add tests for no dash and dash header link diagnostic checking
 suite("Extension Tests", async function () {
     assert.ok(workspace.workspaceFolders);
 
@@ -220,8 +218,14 @@ suite("Extension Tests", async function () {
 [exists](README.md)
 [exists but bad header](README.md#nope)
 [does not exist](DO-NOT-README.md)
+[exists - variant without period](README.md#self-vs-self)
+[exists - variant with period](README.md#self-vs.-self)
 
 ## Working
+
+## Self vs. Self
+
+https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/5
 
 `);
 
