@@ -34,6 +34,7 @@ suite("Extension Tests", async function () {
 `);
 
             const textDocument = await workspace.openTextDocument(readmeMdFilePath);
+            await commands.executeCommand('workbench.action.files.revert', textDocument.uri); // Reload from disk
             await window.showTextDocument(textDocument);
             const links = new LinkDocumentLinkProvider().provideDocumentLinks(textDocument, token);
 
@@ -76,6 +77,7 @@ suite("Extension Tests", async function () {
 
             for (const fullMode of [true, false]) {
                 const textDocument = await workspace.openTextDocument(readmeMdFilePath);
+                await commands.executeCommand('workbench.action.files.revert', textDocument.uri); // Reload from disk
                 const textEditor = await window.showTextDocument(textDocument);
                 await textEditor.edit(editBuilder => editBuilder.insert(textDocument.lineAt(textDocument.lineCount - 1).rangeIncludingLineBreak.end, '\n' + (fullMode ? '[' : '[link](')));
 
@@ -87,7 +89,6 @@ suite("Extension Tests", async function () {
                 ))!;
 
                 assert.ok(items);
-                console.log(JSON.stringify(items, null, 2));
                 assert.equal(items.length, 16);
 
                 // Sort items by sort text because by default the order is based on file system enumeration which is not portable
@@ -225,6 +226,7 @@ suite("Extension Tests", async function () {
 `);
 
             const textDocument = await workspace.openTextDocument(readmeMdFilePath);
+            await commands.executeCommand('workbench.action.files.revert', textDocument.uri); // Reload from disk
             const textEditor = await window.showTextDocument(textDocument);
 
             let diagnostics = await drainAsyncIterator(new LinkDiagnosticProvider(true).provideDiagnostics(textDocument));
