@@ -128,9 +128,13 @@ export class LinkDiagnosticProvider {
 
 // TODO: Test this.
 export class LinkCodeActionProvider implements CodeActionProvider {
-    public provideCodeActions(document: TextDocument, range: Range, context: CodeActionContext, token: CancellationToken): (Command | CodeAction)[] {
+    public provideCodeActions(document: TextDocument, range: Range, context: CodeActionContext, _token: CancellationToken): (Command | CodeAction)[] {
         const codeActions: CodeAction[] = [];
-        for (const diagnostic of languages.getDiagnostics(document.uri)) {
+        for (const diagnostic of context.diagnostics) {
+            if (diagnostic.range.intersection(range) === undefined) {
+                continue;
+            }
+
             if (diagnostic.source === 'MarkDown Link Suggestions' && diagnostic.code) {
                 // TODO: Unhack
                 const values = diagnostic.code.toString().split('\n');
