@@ -5,6 +5,11 @@ import MarkDownDOM from 'markdown-dom';
 import * as path from 'path';
 import { CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, CompletionItemProvider, Diagnostic, DiagnosticCollection, DiagnosticSeverity, DocumentLink, DocumentLinkProvider, ExtensionContext, FileSystemWatcher, Position, Range, RelativePattern, TextDocument, TextEdit, Uri, languages, workspace } from 'vscode';
 
+// Fix for Node runtime (VS Code is running Node 7 but this will natively work in Node 10)
+if (Symbol["asyncIterator"] === undefined) {
+    ((Symbol as any)["asyncIterator"]) = Symbol.for("asyncIterator");
+}
+
 export function activate(context: ExtensionContext) {
     if (workspace.workspaceFolders === undefined) {
         // Ignore files opened without a folder.
@@ -29,7 +34,7 @@ export function activate(context: ExtensionContext) {
     });
 }
 
-class LinkDiagnosticProvider {
+export class LinkDiagnosticProvider {
     private readonly diagnosticCollection: DiagnosticCollection;
     private readonly watcher: FileSystemWatcher;
 
@@ -39,16 +44,12 @@ class LinkDiagnosticProvider {
 
         this.watcher.onDidChange(async uri => {
             const textDocument = await workspace.openTextDocument(uri);
-            // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
-            //const diags = [...await this.diag(textDocument)];
-            this.diagnosticCollection.set(uri, await this.diag(textDocument));
+            this.diagnosticCollection.set(uri, await drainAsyncIterator(this.provideDiagnostics(textDocument)));
         });
 
         this.watcher.onDidCreate(async uri => {
             const textDocument = await workspace.openTextDocument(uri);
-            // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
-            //const diags = [...await this.diag(textDocument)];
-            this.diagnosticCollection.set(uri, await this.diag(textDocument));
+            this.diagnosticCollection.set(uri, await drainAsyncIterator(this.provideDiagnostics(textDocument)));
         });
 
         this.watcher.onDidDelete(uri => this.diagnosticCollection.delete(uri));
@@ -73,22 +74,16 @@ class LinkDiagnosticProvider {
         for (const file of files) {
             const uri = Uri.file(file);
             const textDocument = await workspace.openTextDocument(uri);
-            // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
-            //const diags = [...await this.diag(textDocument)];
-            this.diagnosticCollection.set(uri, await this.diag(textDocument));
+            this.diagnosticCollection.set(uri, await drainAsyncIterator(this.provideDiagnostics(textDocument)));
         }
     }
 
     // TODO: Use MarkDownDOM for finding the links within the document
-    private async /* `*`diag */diag(textDocument: TextDocument)/*: AsyncIterableIterator<Diagnostic> */ {
-        // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
-        const diags: Diagnostic[] = [];
+    public async *provideDiagnostics(textDocument: TextDocument): AsyncIterableIterator<Diagnostic> {
         for (const link of getFileLinks(textDocument)) {
             const absolutePath = resolvePath(textDocument, link.uri);
             if (!await fsExtra.pathExists(absolutePath)) {
-                // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
-                // yield new Diagnostic…
-                diags.push(new Diagnostic(link.uriRange, `The path ${absolutePath} doesn't exist on the disk.`, DiagnosticSeverity.Error));
+                yield new Diagnostic(link.uriRange, `The path ${absolutePath} doesn't exist on the disk.`, DiagnosticSeverity.Error);
             }
 
             if (link.uri.fragment !== '' && (await fsExtra.stat(absolutePath)).isFile()) {
@@ -102,12 +97,10 @@ class LinkDiagnosticProvider {
                 }
 
                 if (!headerExists) {
-                    diags.push(new Diagnostic(link.uriRange, `The header ${link.uri.fragment} doesn't exist in file ${absolutePath}.`, DiagnosticSeverity.Error));
+                    yield new Diagnostic(link.uriRange, `The header ${link.uri.fragment} doesn't exist in file ${absolutePath}.`, DiagnosticSeverity.Error);
                 }
             }
         }
-
-        return diags;
     }
 
     public dispose() {
@@ -127,7 +120,7 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
         this.allowSuggestionsForHeaders = allowSuggestionsForHeaders;
     }
 
-    async provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken, context: CompletionContext) {
+    public async provideCompletionItems(document: TextDocument, position: Position, _token: CancellationToken, context: CompletionContext) {
         const character = context.triggerCharacter || /* Ctrl + Space */ document.getText(new Range(position.translate(0, -1), position));
 
         // TODO: Extend to be able to handle suggestions after backspacing (see if this fires but we already have some text)
@@ -274,7 +267,7 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
 }
 
 export class LinkDocumentLinkProvider implements DocumentLinkProvider {
-    provideDocumentLinks(document: TextDocument, token: CancellationToken): DocumentLink[] {
+    public provideDocumentLinks(document: TextDocument, _token: CancellationToken): DocumentLink[] {
         return [...getFileLinks(document)].map(({ textRange, uri }) => {
             return new DocumentLink(textRange, Uri.file(resolvePath(document, uri)));
         });
@@ -391,4 +384,16 @@ function resolvePath(textDocument: TextDocument, target: Uri) {
     const documentDirectoryPath = path.dirname(textDocument.uri.fsPath);
     const absolutePath = path.resolve(documentDirectoryPath, relativePath);
     return absolutePath;
+}
+
+// https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
+// TODO: Await for VS Code using Node 10 and then use native
+//const diagnostics = [...await this.provideDiagnostics(textDocument)];
+export async function drainAsyncIterator<T>(iterator: AsyncIterableIterator<T>): Promise<T[]> {
+    const items: T[] = [];
+    for await (const item of iterator) {
+        items.push(item);
+    }
+
+    return items;
 }

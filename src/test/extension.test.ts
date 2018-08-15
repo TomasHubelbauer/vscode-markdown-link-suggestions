@@ -1,6 +1,6 @@
 import * as assert from 'assert';
-import { workspace, CancellationTokenSource, CompletionTriggerKind, window, commands, CompletionItemKind, Range } from 'vscode';
-import { LinkDocumentLinkProvider, LinkCompletionItemProvider } from '../extension';
+import { workspace, CancellationTokenSource, CompletionTriggerKind, window, commands, CompletionItemKind, Range, DiagnosticSeverity } from 'vscode';
+import { LinkDocumentLinkProvider, LinkCompletionItemProvider, LinkDiagnosticProvider, drainAsyncIterator } from '../extension';
 import * as path from 'path';
 import * as fsExtra from 'fs-extra';
 
@@ -209,6 +209,46 @@ suite("Extension Tests", async function () {
             await fsExtra.remove(testMdFilePath);
             await fsExtra.remove(nestedTestMdAbsoluteFilePath);
             await fsExtra.emptyDir(nestedDirectoryPath);
+        }
+    });
+
+    test('LinkDiagnosticProvider', async () => {
+        try {
+            await fsExtra.writeFile(readmeMdFilePath, `
+[exists](README.md)
+[exists but bad header](README.md#nope)
+[does not exist](DO-NOT-README.md)
+
+## Working
+
+`);
+
+            const textDocument = await workspace.openTextDocument(readmeMdFilePath);
+            const textEditor = await window.showTextDocument(textDocument);
+
+            let diagnostics = await drainAsyncIterator(new LinkDiagnosticProvider().provideDiagnostics(textDocument));
+
+            assert.equal(diagnostics.length, 2);
+
+            assert.equal(diagnostics[0].severity, DiagnosticSeverity.Error);
+            assert.ok(diagnostics[0].message.startsWith('The header nope doesn\'t exist in file'));
+            assert.ok(diagnostics[0].range.isEqual(new Range(2, 24, 2, 38)));
+
+            assert.equal(diagnostics[1].severity, DiagnosticSeverity.Error);
+            assert.ok(diagnostics[1].message.startsWith('The path') && diagnostics[1].message.endsWith('doesn\'t exist on the disk.'));
+            assert.ok(diagnostics[1].range.isEqual(new Range(3, 17, 3, 33)));
+
+            await textEditor.edit(editBuilder => {
+                editBuilder.replace(new Range(2, 34, 2, 38), 'working');
+                editBuilder.delete(new Range(3, 17, 3, 24));
+            });
+            await textDocument.save();
+
+            diagnostics = await drainAsyncIterator(new LinkDiagnosticProvider().provideDiagnostics(textDocument));
+            assert.equal(diagnostics.length, 0);
+        } finally {
+            await commands.executeCommand('workbench.action.closeActiveEditor');
+            await fsExtra.remove(readmeMdFilePath);
         }
     });
 });
