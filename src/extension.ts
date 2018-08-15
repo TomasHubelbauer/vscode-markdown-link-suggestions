@@ -3,7 +3,7 @@
 import * as fsExtra from 'fs-extra';
 import MarkDownDOM from 'markdown-dom';
 import * as path from 'path';
-import { CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, CompletionItemProvider, Diagnostic, DiagnosticCollection, DiagnosticSeverity, DocumentLink, DocumentLinkProvider, ExtensionContext, FileSystemWatcher, Position, Range, RelativePattern, TextDocument, TextEdit, Uri, languages, workspace } from 'vscode';
+import { CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, CompletionItemProvider, Diagnostic, DiagnosticCollection, DiagnosticSeverity, DocumentLink, DocumentLinkProvider, ExtensionContext, FileSystemWatcher, Position, Range, RelativePattern, TextDocument, TextEdit, Uri, languages, workspace, CodeActionProvider, CodeActionContext, CodeAction, Command, CodeActionKind, commands } from 'vscode';
 
 // Fix for Node runtime (VS Code is running Node 7 but this will natively work in Node 10)
 if (Symbol["asyncIterator"] === undefined) {
@@ -20,10 +20,18 @@ export function activate(context: ExtensionContext) {
     const { allowFullSuggestMode, allowSuggestionsForHeaders } = workspace.getConfiguration('markdown-link-suggestions');
     const linkCompletionItemProvider = new LinkCompletionItemProvider(allowFullSuggestMode, allowSuggestionsForHeaders);
     context.subscriptions.push(languages.registerCompletionItemProvider(markDownDocumentSelector, linkCompletionItemProvider, '[', '(', '#'));
-    context.subscriptions.push(new LinkDiagnosticProvider());
-
+    const linkDiagnosticProvider = new LinkDiagnosticProvider();
+    context.subscriptions.push(linkDiagnosticProvider);
 
     languages.registerDocumentLinkProvider(markDownDocumentSelector, new LinkDocumentLinkProvider());
+    languages.registerCodeActionsProvider(markDownDocumentSelector, new LinkCodeActionProvider());
+
+    commands.registerCommand('extension.createMissingFile', async (missingFilePath: string, reportingFilePath: string) => {
+        await fsExtra.writeFile(missingFilePath, '');
+        // TODO: Unhack
+        const textDocument = await workspace.openTextDocument(Uri.parse(reportingFilePath));
+        (linkDiagnosticProvider as any).diagnosticCollection.set(Uri.parse(reportingFilePath), await drainAsyncIterator(linkDiagnosticProvider.provideDiagnostics(textDocument)));
+    });
 
     workspace.onDidChangeConfiguration(event => {
         if (event.affectsConfiguration('markdown-link-suggestions')) {
@@ -83,7 +91,12 @@ export class LinkDiagnosticProvider {
         for (const link of getFileLinks(textDocument)) {
             const absolutePath = resolvePath(textDocument, link.uri);
             if (!await fsExtra.pathExists(absolutePath)) {
-                yield new Diagnostic(link.uriRange, `The path ${absolutePath} doesn't exist on the disk.`, DiagnosticSeverity.Error);
+                const diagnostic = new Diagnostic(link.uriRange, `The path ${absolutePath} doesn't exist on the disk.`, DiagnosticSeverity.Error);
+                diagnostic.source = 'MarkDown Link Suggestions';
+                // TODO: Similar enough path exists? Use `code` and suggest rewriting.
+                // TODO: Use `code` and suggest creating.
+                diagnostic.code = 'no-file\n' + absolutePath + '\n' + textDocument.uri.toString(); // TODO: Unhack this passage of path, do it somehow righter
+                yield diagnostic;
             }
 
             if (link.uri.fragment !== '' && (await fsExtra.stat(absolutePath)).isFile()) {
@@ -97,7 +110,11 @@ export class LinkDiagnosticProvider {
                 }
 
                 if (!headerExists) {
-                    yield new Diagnostic(link.uriRange, `The header ${link.uri.fragment} doesn't exist in file ${absolutePath}.`, DiagnosticSeverity.Error);
+                    const diagnostic = new Diagnostic(link.uriRange, `The header ${link.uri.fragment} doesn't exist in file ${absolutePath}.`, DiagnosticSeverity.Error);
+                    diagnostic.source = 'MarkDown Link Suggestions';
+                    // TODO: Similar enough path exists? Use `code` and `relatedInformation` and suggest rewriting.
+                    // TODO: Use `code` and suggest appending to the file (maybe quick pick after which header).
+                    yield diagnostic;
                 }
             }
         }
@@ -106,6 +123,32 @@ export class LinkDiagnosticProvider {
     public dispose() {
         this.diagnosticCollection.dispose();
         this.watcher.dispose();
+    }
+}
+
+// TODO: Test this.
+export class LinkCodeActionProvider implements CodeActionProvider {
+    public provideCodeActions(document: TextDocument, range: Range, context: CodeActionContext, token: CancellationToken): (Command | CodeAction)[] {
+        const codeActions: CodeAction[] = [];
+        for (const diagnostic of languages.getDiagnostics(document.uri)) {
+            if (diagnostic.source === 'MarkDown Link Suggestions' && diagnostic.code) {
+                // TODO: Unhack
+                const values = diagnostic.code.toString().split('\n');
+                if (values[0] !== 'no-file') {
+                    continue;
+                }
+
+                const missingFilePath = values[1];
+                const reportingFilePath = values[2];
+
+                const codeAction = new CodeAction('Create the missing file', CodeActionKind.Empty);
+                codeAction.command = { title: '', command: 'extension.createMissingFile', tooltip: '', arguments: [missingFilePath, reportingFilePath] };
+
+                codeActions.push(codeAction);
+            }
+        }
+
+        return codeActions;
     }
 }
 

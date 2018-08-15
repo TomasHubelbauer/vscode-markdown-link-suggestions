@@ -6,7 +6,7 @@
 - [custom](custom:tomas@hubelbauer.net)
 - [file ok](README.md)
 - [file ko](README.md)
-  - Change this during demo otherwise F5 will fail due to invalid URL
+  - Change this to `README2.d` during demo otherwise F5 will fail due to invalid URL
 - [ ] This [also works](README.md)
 
 ```code

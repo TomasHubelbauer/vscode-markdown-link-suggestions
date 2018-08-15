@@ -1,5 +1,9 @@
 # Change Log
 
+## `11.0.0` (2018-08-15)
+
+- Contribute a code action provider for link diagnostics which currently offers and option to create the file if a links file path points to a non-existent file
+
 ## `10.0.1` (2018-08-15)
 
 - Fix a problem where two or more consecutive links on one line would be highlighted as one stretching from first to last

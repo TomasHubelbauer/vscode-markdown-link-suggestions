@@ -2,7 +2,7 @@
     "name": "vscode-markdown-link-suggestions",
     "displayName": "MarkDown Link Suggestions",
     "description": "Suggests local files and header anchors in MarkDown links",
-    "version": "10.0.1",
+    "version": "11.0.0",
     "license": "MIT",
     "categories": [
         "Programming Languages",
@@ -42,6 +42,12 @@
                         "default": true
                     }
                 }
+            }
+        ],
+        "commands": [
+            {
+                "command": "extension.createMissingFile",
+                "title": "Create Missing File"
             }
         ]
     },
