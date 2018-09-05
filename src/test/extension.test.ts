@@ -51,7 +51,38 @@ suite("Extension Tests", async function () {
         }
     });
 
-    test('LinkCompletionItemProvider', async () => {
+    test('LinkCompletionItemProvider header mode', async () => {
+        try {
+            await fsExtra.writeFile(readmeMdFilePath, `
+# Test
+
+## Header 1
+
+## Header 2
+`);
+
+            const textDocument = await workspace.openTextDocument(readmeMdFilePath);
+            await commands.executeCommand('workbench.action.files.revert', textDocument.uri); // Reload from disk
+            const textEditor = await window.showTextDocument(textDocument);
+            await textEditor.edit(editBuilder => editBuilder.insert(textDocument.lineAt(textDocument.lineCount - 1).rangeIncludingLineBreak.end, '\n' + '[link](#h'));
+
+            const items = (await new LinkCompletionItemProvider(true, true).provideCompletionItems(
+                textDocument,
+                textDocument.lineAt(textDocument.lineCount - 1).range.end,
+                token,
+                { triggerKind: CompletionTriggerKind.Invoke }
+            ))!;
+
+            assert.ok(items);
+            console.log(items);
+
+            await commands.executeCommand('workbench.action.closeActiveEditor');
+        } finally {
+            await fsExtra.remove(readmeMdFilePath);
+        }
+    });
+
+    test('LinkCompletionItemProvider full and partial mode', async () => {
         try {
             await fsExtra.writeFile(readmeMdFilePath, `
 # Test

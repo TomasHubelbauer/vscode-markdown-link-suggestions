@@ -4,8 +4,9 @@ import * as fsExtra from 'fs-extra';
 import MarkDownDOM from 'markdown-dom';
 import * as path from 'path';
 import { CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, CompletionItemProvider, Diagnostic, DiagnosticCollection, DiagnosticSeverity, DocumentLink, DocumentLinkProvider, ExtensionContext, FileSystemWatcher, Position, Range, RelativePattern, TextDocument, TextEdit, Uri, languages, workspace, CodeActionProvider, CodeActionContext, CodeAction, Command, CodeActionKind, commands } from 'vscode';
+import LinkContextRecognizer from './LinkContextRecognizer';
 
-// Fix for Node runtime (VS Code is running Node 7 but this will natively work in Node 10)
+// Fix for Node runtime (VS Code is running Node 8.9.3 but this will natively work in Node 10)
 if (Symbol["asyncIterator"] === undefined) {
     ((Symbol as any)["asyncIterator"]) = Symbol.for("asyncIterator");
 }
@@ -19,7 +20,7 @@ export function activate(context: ExtensionContext) {
     const markDownDocumentSelector = { scheme: 'file', language: 'markdown' };
     const { allowFullSuggestMode, allowSuggestionsForHeaders } = workspace.getConfiguration('markdown-link-suggestions');
     const linkCompletionItemProvider = new LinkCompletionItemProvider(allowFullSuggestMode, allowSuggestionsForHeaders);
-    context.subscriptions.push(languages.registerCompletionItemProvider(markDownDocumentSelector, linkCompletionItemProvider, '[', '(', '#'));
+    context.subscriptions.push(languages.registerCompletionItemProvider(markDownDocumentSelector, linkCompletionItemProvider, ...LinkContextRecognizerBase.getTriggerCharacters()));
     const linkDiagnosticProvider = new LinkDiagnosticProvider();
     context.subscriptions.push(linkDiagnosticProvider);
 
@@ -162,6 +163,14 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
     }
 
     public async provideCompletionItems(document: TextDocument, position: Position, _token: CancellationToken, context: CompletionContext) {
+        try {
+            // Parse out the MarkDown link context we are in
+            const linkContext = new LinkContextRecognizer(document.lineAt(position.line).text, position.character);
+            console.log(linkContext);
+        } catch (error) {
+            // TODO: Telemetry
+        }
+
         const character = context.triggerCharacter || /* Ctrl + Space */ document.getText(new Range(position.translate(0, -1), position));
 
         // TODO: Extend to be able to handle suggestions after backspacing (see if this fires but we already have some text)
