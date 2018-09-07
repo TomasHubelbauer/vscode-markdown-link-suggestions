@@ -1,181 +1,477 @@
-// TODO: Test cases like: a [b (c) d [e]](./f/g(h)/i/j.k#l-m-(n)-o.p/q/r/s?tuvwxyz
+import LinkContextRecognizerBase from "./LinkContextRecognizerBase";
+
 export default class LinkContextRecognizer extends LinkContextRecognizerBase {
-  private urlCharactersReverse: string[] = [];
+  // Updated in each step
+  private textCharactersReverse: string[] = [];
+  private pathCharactersReverse: string[] = [];
   private pathComponentsReverse: string[] = [];
 
-  public anchor: string = '';
+  // Solidified in unambiguous points
+  public text = '';
+  public path = '';
+  public pathComponents: string[] = [];
+  public query = '';
+  public fragment = '';
 
   constructor(line: string, index: number) {
-    super(line, index);
-    // TODO: Last step turning draft fields (private) to real fields (public) after parsing
+    super();
+    const handlers = Reflect.ownKeys(Reflect.getPrototypeOf(this)).filter(h => typeof h === 'string' && h !== 'constructor') as string[];
+    // Validate handlers are in the right other and there are no missing or extra handlers (after instantiation)
+    this.validate(handlers);
+    // Run the parsing now that both the base class and this class have been fully instantiated
+    this.parse(line, index);
   }
 
-  private hashUrl() {
-    // Recognized anchor
-    this.anchor = this.urlCharactersReverse.reverse().join('');
-    this.urlCharactersReverse = [];
-    this.state = LinkContextRecognizerBase.STATE_URL_PRIOR_HASH;
+  /* URL */
+
+  // @ts-ignore
+  private nonTriggerUrl() {
+    this.pathCharactersReverse.push(this.character);
   }
 
+  // @ts-ignore
+  private leftBraceUrl() {
+    throw new Error((this as any).name);
+  }
+
+  // @ts-ignore
+  private rightBraceUrl() {
+    throw new Error();
+  }
+
+  // @ts-ignore
   private leftParenUrl() {
     this.state = LinkContextRecognizerBase.STATE_URL_TRANSITION;
   }
 
-  private rightParenUrl() {
-    this.urlCharactersReverse.push(this.character);
+  // @ts-ignore
+  private forwardSlashUrl() {
+    this.pathComponentsReverse.push(this.pathCharactersReverse.reverse().join(''));
+    this.pathCharactersReverse = [];
   }
 
-  private leftBraceUrl() {
-    debugger;
+  // @ts-ignore
+  private backwardSlashUrl() {
+    throw new Error();
   }
 
-  private rightBraceUrl() {
-    debugger;
-  }
-
-  private slashUrl() {
-    debugger;
-  }
-
+  // @ts-ignore
   private spaceUrl() {
-    debugger;
+    throw new Error();
   }
 
-  private nonTriggerUrl() {
-    this.urlCharactersReverse.push(this.character);
+  // @ts-ignore
+  private queryUrl() {
+    this.state = LinkContextRecognizerBase.STATE_URL_PRIOR_QUERY;
   }
 
-  private hashUrlTransition() {
-    debugger;
+  // @ts-ignore
+  private hashUrl() {
+    // Recognized anchor
+    this.fragment = this.pathCharactersReverse.reverse().join('');
+    this.pathCharactersReverse = [];
+    this.state = LinkContextRecognizerBase.STATE_URL_PRIOR_HASH;
   }
 
-  private leftParenUrlTransition() {
-    debugger;
+  // @ts-ignore
+  private rightParenUrl() {
+    // Ignore closing parenthesis of the MarkDown link
+    if (this.pathCharactersReverse.length === 0 && this.pathComponentsReverse.length === 0) {
+      return;
+    }
+
+    this.pathCharactersReverse.push(this.character);
   }
 
-  private rightParenUrlTransition() {
-    debugger;
-  }
+  /* URL_TRANSITION */
 
-  private leftBraceUrlTransition() {
-    debugger;
-  }
-
-  private rightBraceUrlTransition() {
-    debugger;
-  }
-
-  private slashUrlTransition() {
-    debugger;
-  }
-
-  private spaceUrlTransition() {
-    debugger;
-  }
-
+  // @ts-ignore
   private nonTriggerUrlTransition() {
     // Revert what seemed it will be a transition but ended up not being
     this.state = LinkContextRecognizerBase.STATE_URL;
-    this.urlCharactersReverse.push('(', this.character);
+    this.pathCharactersReverse.push('(', this.character);
   }
 
-  private hashUrlPriorHash() {
-    debugger;
+  // @ts-ignore
+  private leftBraceUrlTransition() {
+    throw new Error();
   }
 
-  private leftParenUrlPriorHash() {
-    debugger;
+  // @ts-ignore
+  private rightBraceUrlTransition() {
+    this.pathComponentsReverse.unshift(this.pathCharactersReverse.reverse().join(''));
+    this.pathComponents = this.pathComponentsReverse.reverse();
+    this.path = this.pathComponentsReverse.reverse().join('/');
+    this.state = LinkContextRecognizerBase.STATE_TEXT;
   }
 
-  private rightParenUrlPriorHash() {
-    debugger;
+  // @ts-ignore
+  private leftParenUrlTransition() {
+    throw new Error();
   }
 
+  // @ts-ignore
+  private forwardSlashUrlTransition() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private backwardSlashUrlTransition() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private spaceUrlTransition() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private queryUrlTransition() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private hashUrlTransition() {
+    throw new Error();
+  }
+
+
+  // @ts-ignore
+  private rightParenUrlTransition() {
+    throw new Error();
+  }
+
+  /* URL_PRIOR_HASH */
+
+  // @ts-ignore
+  private nonTriggerUrlPriorHash() {
+    this.pathCharactersReverse.push(this.character);
+  }
+
+  // @ts-ignore
   private leftBraceUrlPriorHash() {
-    debugger;
+    throw new Error();
   }
 
+  // @ts-ignore
   private rightBraceUrlPriorHash() {
-    debugger;
+    throw new Error();
   }
 
-  private slashUrlPriorHash() {
-    this.pathComponentsReverse.push(this.urlCharactersReverse.reverse().join(''));
-    this.urlCharactersReverse = [];
+  // @ts-ignore
+  private leftParenUrlPriorHash() {
+    this.state = LinkContextRecognizerBase.STATE_URL_PRIOR_SLASH_TRANSITION;
+  }
+
+  // @ts-ignore
+  private forwardSlashUrlPriorHash() {
+    this.pathComponentsReverse.push(this.pathCharactersReverse.reverse().join(''));
+    this.pathCharactersReverse = [];
     this.state = LinkContextRecognizerBase.STATE_URL_PRIOR_SLASH;
   }
 
+  // @ts-ignore
+  private backwardSlashUrlPriorHash() {
+    throw new Error();
+  }
+
+  // @ts-ignore
   private spaceUrlPriorHash() {
-    debugger;
+    throw new Error();
   }
 
-  private nonTriggerUrlPriorHash() {
-    this.urlCharactersReverse.push(this.character);
+  // @ts-ignore
+  private queryUrlPriorHash() {
+    throw new Error();
   }
 
-  private hashUrlPriorSlash() {
-    debugger;
+  // @ts-ignore
+  private hashUrlPriorHash() {
+    throw new Error();
   }
 
+  // @ts-ignore
+  private rightParenUrlPriorHash() {
+    throw new Error();
+  }
+
+  /* URL_PRIOR_QUERY */
+
+  // @ts-ignore
+  private nonTriggerUrlPriorQuery() {
+    // 2 ways lead here - query in fragment & query in path, indistinguishable now, so we assume query and reset to fragment if needed
+    this.query = this.pathCharactersReverse.reverse().join('');
+    this.pathCharactersReverse = [];
+    this.state = LinkContextRecognizerBase.STATE_URL_PRIOR_QUERY;
+  }
+
+  // @ts-ignore
+  private leftBraceUrlPriorQuery() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private rightBraceUrlPriorQuery() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private leftParenUrlPriorQuery() {
+    this.state = LinkContextRecognizerBase.STATE_URL_PRIOR_QUERY_TRANSITION;
+  }
+
+  // @ts-ignore
+  private forwardSlashUrlPriorQuery() {
+    this.pathComponentsReverse.push(this.pathCharactersReverse.reverse().join(''));
+    this.pathCharactersReverse = [];
+  }
+
+  // @ts-ignore
+  private backwardSlashUrlPriorQuery() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private spaceUrlPriorQuery() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private queryUrlPriorQuery() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private hashUrlPriorQuery() {
+    console.log(this);
+
+    // If we previously thought we were in a query but it turned out we were in a hash, reset that
+    if (this.query !== '') {
+
+    }
+
+    // If we previously thought we were in a path but it turned out we were in a hash, reset that
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private rightParenUrlPriorQuery() {
+    this.pathCharactersReverse.push(this.character);
+  }
+
+  /* URL_PRIOR_QUERY_TRANSITION */
+
+  // @ts-ignore
+  private nonTriggerUrlPriorQueryTransition() {
+    this.state = LinkContextRecognizerBase.STATE_URL_PRIOR_QUERY;
+    this.pathCharactersReverse.push('(', this.character);
+  }
+
+  // @ts-ignore
+  private leftBraceUrlPriorQueryTransition() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private rightBraceUrlPriorQueryTransition() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private leftParenUrlPriorQueryTransition() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private forwardSlashUrlPriorQueryTransition() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private backwardSlashUrlPriorQueryTransition() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private spaceUrlPriorQueryTransition() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private queryUrlPriorQueryTransition() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private hashUrlPriorQueryTransition() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private rightParenUrlPriorQueryTransition() {
+    throw new Error();
+  }
+
+  /* URL_PRIOR_SLASH */
+
+  // @ts-ignore
+  private nonTriggerUrlPriorSlash() {
+    this.pathCharactersReverse.push(this.character);
+  }
+
+  // @ts-ignore
+  private leftBraceUrlPriorSlash() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private rightBraceUrlPriorSlash() {
+    throw new Error();
+  }
+
+  // @ts-ignore
   private leftParenUrlPriorSlash() {
     this.state = LinkContextRecognizerBase.STATE_URL_PRIOR_SLASH_TRANSITION;
   }
 
-  private rightParenUrlPriorSlash() {
-    this.urlCharactersReverse.push(this.character);
+  // @ts-ignore
+  private forwardSlashUrlPriorSlash() {
+    this.pathComponentsReverse.push(this.pathCharactersReverse.reverse().join(''));
+    this.pathCharactersReverse = [];
   }
 
-  private leftBraceUrlPriorSlash() {
-    debugger;
+  // @ts-ignore
+  private backwardSlashUrlPriorSlash() {
+    throw new Error();
   }
 
-  private rightBraceUrlPriorSlash() {
-    debugger;
-  }
-
-  private slashUrlPriorSlash() {
-    this.pathComponentsReverse.push(this.urlCharactersReverse.reverse().join(''));
-    this.urlCharactersReverse = [];
-  }
-
+  // @ts-ignore
   private spaceUrlPriorSlash() {
-    debugger;
+    throw new Error();
   }
 
-  private nonTriggerUrlPriorSlash() {
-    this.urlCharactersReverse.push(this.character);
+  // @ts-ignore
+  private queryUrlPriorSlash() {
+    throw new Error();
   }
 
-  private hashUrlPriorSlashTransition() {
-    debugger;
+  // @ts-ignore
+  private hashUrlPriorSlash() {
+    throw new Error();
   }
 
-  private leftParenUrlPriorSlashTransition() {
-    debugger;
+  // @ts-ignore
+  private rightParenUrlPriorSlash() {
+    this.pathCharactersReverse.push(this.character);
   }
 
-  private rightParenUrlPriorSlashTransition() {
-    debugger;
-  }
 
-  private leftBraceUrlPriorSlashTransition() {
-    debugger;
-  }
+  /* URL_PRIOR_SLASH_TRANSITION */
 
-  private rightBraceUrlPriorSlashTransition() {
-    debugger;
-  }
-
-  private slashUrlPriorSlashTransition() {
-    debugger;
-  }
-
-  private spaceUrlPriorSlashTransition() {
-    debugger;
-  }
-
+  // @ts-ignore
   private nonTriggerUrlPriorSlashTransition() {
     this.state = LinkContextRecognizerBase.STATE_URL_PRIOR_SLASH;
-    this.urlCharactersReverse.push('(', this.character);
+    this.pathCharactersReverse.push('(', this.character);
+  }
+
+  // @ts-ignore
+  private leftBraceUrlPriorSlashTransition() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private rightBraceUrlPriorSlashTransition() {
+    this.pathComponentsReverse.unshift(this.pathCharactersReverse.reverse().join(''));
+    this.pathComponents = this.pathComponentsReverse.reverse();
+    this.path = this.pathComponentsReverse.reverse().join('/');
+    this.state = LinkContextRecognizerBase.STATE_TEXT;
+  }
+
+  // @ts-ignore
+  private leftParenUrlPriorSlashTransition() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private forwardSlashUrlPriorSlashTransition() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private backwardSlashUrlPriorSlashTransition() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private spaceUrlPriorSlashTransition() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private queryUrlPriorSlashTransition() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private hashUrlPriorSlashTransition() {
+    throw new Error();
+  }
+
+
+  // @ts-ignore
+  private rightParenUrlPriorSlashTransition() {
+    throw new Error();
+  }
+
+  /* TEXT */
+
+  // @ts-ignore
+  private nonTriggerText() {
+    this.textCharactersReverse.push(this.character);
+  }
+
+  // @ts-ignore
+  private leftBraceText() {
+    this.text = this.textCharactersReverse.reverse().join('');
+  }
+
+  // @ts-ignore
+  private rightBraceText() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private leftParenText() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private forwardSlashText() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private backwardSlashText() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private spaceText() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private queryText() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private hashText() {
+    throw new Error();
+  }
+
+  // @ts-ignore
+  private rightParenText() {
+    throw new Error();
   }
 }

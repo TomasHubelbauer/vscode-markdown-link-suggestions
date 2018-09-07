@@ -5,6 +5,7 @@ import MarkDownDOM from 'markdown-dom';
 import * as path from 'path';
 import { CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, CompletionItemProvider, Diagnostic, DiagnosticCollection, DiagnosticSeverity, DocumentLink, DocumentLinkProvider, ExtensionContext, FileSystemWatcher, Position, Range, RelativePattern, TextDocument, TextEdit, Uri, languages, workspace, CodeActionProvider, CodeActionContext, CodeAction, Command, CodeActionKind, commands } from 'vscode';
 import LinkContextRecognizer from './LinkContextRecognizer';
+import LinkContextRecognizerBase from './LinkContextRecognizerBase';
 
 // Fix for Node runtime (VS Code is running Node 8.9.3 but this will natively work in Node 10)
 if (Symbol["asyncIterator"] === undefined) {
