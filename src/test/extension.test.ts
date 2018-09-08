@@ -1,9 +1,12 @@
 import * as assert from 'assert';
 import { workspace, CancellationTokenSource, CompletionTriggerKind, window, commands, CompletionItemKind, Range, DiagnosticSeverity } from 'vscode';
-import { LinkDocumentLinkProvider, LinkCompletionItemProvider, LinkDiagnosticProvider, drainAsyncIterator } from '../extension';
 import * as path from 'path';
 import * as fsExtra from 'fs-extra';
 import LinkContextRecognizer from '../LinkContextRecognizer';
+import LinkDiagnosticProvider from '../LinkDiagnosticProvider';
+import drainAsyncIterator from '../drainAsyncIterator';
+import LinkCompletionItemProvider from '../LinkCompletionItemProvider';
+import LinkDocumentLinkProvider from '../LinkDocumentLinkProvider';
 
 // TODO: Extend full/partial suggest mode with a check for the full mode disabling setting
 suite("Extension Tests", async function () {
