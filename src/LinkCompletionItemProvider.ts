@@ -1,9 +1,11 @@
-import { CompletionItemProvider, TextDocument, Position, CancellationToken, CompletionContext, CompletionItem, Range, CompletionItemKind, workspace, RelativePattern, TextEdit, Uri, commands, SymbolInformation, SymbolKind } from "vscode";
+import { CompletionItemProvider, TextDocument, Position, CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, commands, SymbolInformation, SymbolKind, Uri } from "vscode";
 import LinkContextRecognizer from "./LinkContextRecognizer";
-import { dirname, extname, basename, relative, normalize } from "path";
+import { dirname, extname, basename, relative, normalize, win32, posix } from "path";
 import anchorize from "./anchorize";
+import getNonExcludedFilePaths from "./getNonExcludedFilePaths";
 
 export default class LinkCompletionItemProvider implements CompletionItemProvider {
+  // TODO: Revisit these
   public allowFullSuggestMode = false;
   public allowSuggestionsForHeaders = true;
 
@@ -14,94 +16,56 @@ export default class LinkCompletionItemProvider implements CompletionItemProvide
     this.allowSuggestionsForHeaders = allowSuggestionsForHeaders;
   }
 
-  public async provideCompletionItems(document: TextDocument, position: Position, _token: CancellationToken, context: CompletionContext) {
+  public async provideCompletionItems(document: TextDocument, position: Position, _token: CancellationToken, _context: CompletionContext) {
     // Parse out the MarkDown link context we are in
-    const { text, path, pathComponents, query, fragment } = new LinkContextRecognizer(
-      document.lineAt(position.line).text,
-      position.character
-    );
+    const { text, path, pathComponents, query, fragment } = new LinkContextRecognizer(document.lineAt(position.line).text, position.character);
+    const items: CompletionItem[] = [];
 
-    console.log({ line: document.lineAt(position.line).text, text, path, pathComponents, query, fragment });
+    // Suggest headers
+    if (fragment !== null) {
+      console.log('Suggest headers', JSON.stringify(path));
+      const uri = path === null ? document.uri : undefined as any; // TODO
+      const symbols = await commands.executeCommand('vscode.executeWorkspaceSymbolProvider', '') as SymbolInformation[];
+      const headers = symbols.filter(symbol => symbol.location.uri === uri && symbol.kind === SymbolKind.String);
+      console.log(headers);
+      return undefined as any as CompletionItem[]; // TODO
+    }
 
-
-    const character = context.triggerCharacter || /* Ctrl + Space */ document.getText(new Range(position.translate(0, -1), position));
-
-    // TODO: Extend to be able to handle suggestions after backspacing (see if this fires but we already have some text)
-    const fullSuggestMode = character === '[';
-    if (fullSuggestMode && !this.allowFullSuggestMode) {
+    // Skip suggesting on query
+    if (query !== null) {
       return;
     }
 
+    // Suggest paths based on path components
+    if (path !== null) {
+      console.log('Suggest paths');
+      // TODO: Check for scheme or better yet add it to the parser
+      console.log(pathComponents);
+      throw new Error();
+    }
+
+    // Suggest paths based on text
+    if (text !== null) {
+      console.log('Suggest links');
+      throw new Error();
+    }
+
     const documentDirectoryPath = dirname(document.uri.fsPath);
-    const items: CompletionItem[] = [];
 
-    let fullSuggestModeBraceCompleted = false;
-    let partialSuggestModeBraceCompleted = false;
-    const braceCompletionRange = new Range(position, position.translate(0, 1));
-    if (fullSuggestMode) {
-      fullSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ']';
-    } else {
-      // TODO: Handle a case where there is only '(' on the line
-      const linkConfirmationRange = new Range(position.translate(0, -2), position);
-      if (character === '(') {
-        if (document.getText(linkConfirmationRange) === '](') {
-          partialSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ')';
-          // TODO: Read the link text to be able to rank items matching it higher
-        } else {
-          // Bail if this is just a regular parentheses, not MarkDown link
-          return;
-        }
-      } else {
-        const headerLinkConfirmationRange = new Range(position.translate(0, -3), position);
-        // TODO: Integrate this in a bit nicer if possible
-        if (character === '#' && document.getText(headerLinkConfirmationRange) === '](#') {
-          partialSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ')';
-          // Only suggest local file headers
-          const symbols = await commands.executeCommand('vscode.executeWorkspaceSymbolProvider', '') as SymbolInformation[];
-          const headers = symbols.filter(symbol => symbol.location.uri === document.uri && symbol.kind === SymbolKind.String);
-          for (const header of headers) {
-            items.push(this.item(CompletionItemKind.Reference, document.uri.fsPath, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange, true));
-          }
-
-          return items;
-        } else {
-          // Bail if we are in neither full suggest mode nor partial (link target) suggest mode nor header mode
-          return;
-        }
-      }
-    }
-
-    // TODO: https://github.com/TomasHubelbauer/vscode-extension-findFilesWithExcludes
-    // TODO: https://github.com/Microsoft/vscode/issues/48674
-    const excludes = await workspace.getConfiguration('search', null).get('exclude')!;
-    const globs = Object.keys(excludes).map(exclude => new RelativePattern(workspace.workspaceFolders![0], exclude));
-    const occurences: { [fsPath: string]: number; } = {};
-    for (const glob of globs) {
-      // TODO: https://github.com/Microsoft/vscode/issues/47645
-      for (const file of await workspace.findFiles('**/*.*', glob)) {
-        occurences[file.fsPath] = (occurences[file.fsPath] || 0) + 1;
-      }
-    }
-
-    // Accept only files not excluded in any of the globs
-    const files = Object.keys(occurences).filter(fsPath => occurences[fsPath] === globs.length).map(file => Uri.file(file));
+    const files = await getNonExcludedFilePaths();
     for (const file of files) {
-      if (file.scheme !== 'file') {
-        return;
-      }
-
-      items.push(this.item(CompletionItemKind.File, file.fsPath, null, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
-      if (extname(file.fsPath).toUpperCase() === '.MD' && this.allowSuggestionsForHeaders) {
+      items.push(this.makeFileCompletionItem(file, documentDirectoryPath));
+      if (extname(file).toUpperCase() === '.MD') {
         const symbols = await commands.executeCommand('vscode.executeWorkspaceSymbolProvider', '') as SymbolInformation[];
-        const headers = symbols.filter(symbol => symbol.location.uri === file && symbol.kind === SymbolKind.String);
+        const headers = symbols.filter(symbol => symbol.location.uri === Uri.file(file) && symbol.kind === SymbolKind.String);
         for (const header of headers) {
-          items.push(this.item(CompletionItemKind.Reference, file.fsPath, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
+          items.push(new CompletionItem(file + '#' + header.name, CompletionItemKind.File));
         }
       }
     }
 
     const directories = files.reduce((directoryPaths, filePath) => {
-      const directoryPath = dirname(filePath.fsPath);
+      const directoryPath = dirname(filePath);
       if (!directoryPaths.includes(directoryPath)) {
         directoryPaths.push(directoryPath);
       }
@@ -110,13 +74,40 @@ export default class LinkCompletionItemProvider implements CompletionItemProvide
     }, [] as string[]);
 
     for (const directory of directories) {
-      items.push(this.item(CompletionItemKind.Folder, directory, null, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
+      items.push(this.makeDirectoryCompletionItem(directory, documentDirectoryPath));
     }
 
     return items;
   }
 
-  private item(kind: CompletionItemKind, absoluteFilePath: string, headerSymbol: SymbolInformation | null, absoluteDocumentDirectoryPath: string, fullSuggestMode: boolean, fullSuggestModeBraceCompleted: boolean, partialSuggestModeBraceCompleted: boolean, braceCompletionRange: Range, hack?: boolean) {
+  /* TODO: URL encode insert paths minimally (to make VS Code work, like replacing + sign and other otherwise linkage breaking characters) */
+
+  private makeDirectoryCompletionItem(itemDirectoryPath: string, documentDirectoryPath: string) {
+    const relativePath = relative(documentDirectoryPath, itemDirectoryPath);
+    const label = relativePath === '' ? basename(itemDirectoryPath) : `${basename(itemDirectoryPath)} (${relativePath})`;
+    const item = new CompletionItem(label, CompletionItemKind.Folder);
+    item.detail = basename(itemDirectoryPath);
+    item.documentation = normalize(itemDirectoryPath);
+    item.insertText = relativePath || '.';
+    item.sortText = relativePath;
+    item.filterText = [win32.normalize(itemDirectoryPath), posix.normalize(itemDirectoryPath)].join('\n');
+    return item;
+  }
+
+  private makeFileCompletionItem(itemFilePath: string, documentDirectoryPath: string) {
+    const relativePath = relative(documentDirectoryPath, itemFilePath);
+    const label = relativePath === '' ? basename(itemFilePath) : `${basename(itemFilePath)} (${relativePath})`;
+    const item = new CompletionItem(label, CompletionItemKind.File);
+    item.detail = basename(itemFilePath);
+    item.documentation = normalize(itemFilePath);
+    item.insertText = relativePath || '.';
+    item.sortText = relativePath;
+    item.filterText = [win32.normalize(itemFilePath), posix.normalize(itemFilePath)].join('\n');
+    return item;
+  }
+
+  // @ts-ignore
+  private item(kind: CompletionItemKind, absoluteFilePath: string, headerSymbol: SymbolInformation | null, absoluteDocumentDirectoryPath: string, hack?: boolean) {
     // Extract and join the file name with header (if any) for displaying in the label
     const fileName = basename(absoluteFilePath);
     let fileNameWithHeader = fileName;
@@ -144,12 +135,12 @@ export default class LinkCompletionItemProvider implements CompletionItemProvide
     // TODO: URL encode path minimally (to make VS Code work, like replacing + sign and other otherwise linkage breaking characters)
     relativeFilePath = relativeFilePath; // TODO
     // Insert either relative file path with anchor only or file name without anchor in the MarkDown link syntax if in full suggest mode
-    if (fullSuggestMode) {
+    if ('fullSuggestMode') {
       item.insertText = `${fileName}](${relativeFilePath}${anchor ? '#' + anchor : ''})`;
     } else {
       item.insertText = hack ? anchor : (anchor ? relativeFilePath + '#' + anchor : relativeFilePath);
 
-      if (!partialSuggestModeBraceCompleted) {
+      if (!'partialSuggestModeBraceCompleted') {
         item.insertText += ')';
       }
     }
@@ -167,8 +158,8 @@ export default class LinkCompletionItemProvider implements CompletionItemProvide
     // Offer both forwards slash and backwards slash filter paths so that the user can type regardless of the platform
     item.filterText = [absoluteFilePath.replace(/\\/g, '/'), absoluteFilePath.replace(/\//g, '\\')].join();
     // Remove brace-completed closing square bracket if any (may be turned off) when in full suggest mode because we insert our own and then some
-    if (fullSuggestMode && fullSuggestModeBraceCompleted) {
-      item.additionalTextEdits = [TextEdit.delete(braceCompletionRange)];
+    if ('fullSuggestMode' && 'fullSuggestModeBraceCompleted') {
+      //item.additionalTextEdits = [TextEdit.delete(braceCompletionRange)];
     }
 
     return item;

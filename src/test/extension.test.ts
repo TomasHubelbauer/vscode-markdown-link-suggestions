@@ -25,27 +25,37 @@ suite("Extension Tests", async function () {
     const nestedTestMdAbsoluteFilePath = path.join(workspaceDirectoryPath, nestedTestMdRelativeFilePath);
 
     test('LinkContextRecognizer', async () => {
-        const tests: {
-            line: string;
-            index?: number;
-            text: string;
-            path: string;
-            pathComponents: string[];
-            query: string;
-            fragment: string;
-        }[] =
+        // TODO: Introduce combinatorically generated tests
+        const tests: { line: string; index?: number; text: string | null; path: string | null; pathComponents: string[] | null; query: string | null; fragment: string | null; }[] =
             [
+                // TODO: Introduce a new field called `transitioned` for `](` so that we can know to suggest inserting `(`
+                { line: '[', text: '', path: null, pathComponents: null, query: null, fragment: null },
+                { line: '(', text: null, path: null, pathComponents: null, query: null, fragment: null },
+                { line: '[link](test#a[b]', text: 'link', path: 'test', pathComponents: ['test'], query: null, fragment: 'a[b]' },
+                { line: '[link]', text: 'link', path: null, pathComponents: null, query: null, fragment: null },
+                { line: '[link](', text: 'link', path: '', pathComponents: [], query: null, fragment: null },
+                { line: '[link]()', text: 'link', path: '', pathComponents: [], query: null, fragment: null },
+                { line: '[link](a', text: 'link', path: 'a', pathComponents: ['a'], query: null, fragment: null },
+                { line: '[link](#', text: 'link', path: '', pathComponents: [], query: null, fragment: '' },
+                { line: '[link](#header', text: 'link', path: '', pathComponents: [], query: null, fragment: 'header' },
+                { line: '[link](a#', text: 'link', path: 'a', pathComponents: ['a'], query: null, fragment: '' },
+                { line: '[link](a?', text: 'link', path: 'a', pathComponents: ['a'], query: '', fragment: null },
+                { line: '[link](a?#', text: 'link', path: 'a', pathComponents: ['a'], query: '', fragment: '' },
+                {
+                    line: ' [link](README.md', text: 'link',
+                    path: 'README.md', pathComponents: ['README.md'], query: null, fragment: null,
+                },
                 {
                     line: ' [link](README.md)', text: 'link',
-                    path: 'README.md', pathComponents: ['README.md'], query: '', fragment: '',
+                    path: 'README.md', pathComponents: ['README.md'], query: null, fragment: null,
                 },
                 {
                     line: ' [link](README.md#header)', text: 'link',
-                    path: 'README.md', pathComponents: ['README.md'], query: '', fragment: 'header',
+                    path: 'README.md', pathComponents: ['README.md'], query: null, fragment: 'header',
                 },
                 {
                     line: ' [link](nested/README.md)', text: 'link',
-                    path: 'nested/README.md', pathComponents: ['nested', 'README.md'], query: '', fragment: '',
+                    path: 'nested/README.md', pathComponents: ['nested', 'README.md'], query: null, fragment: null,
                 },
                 {
                     line: 'a [b (c) d [e]](./f/g(h)/i/j.k?test#l-m-(n)-o.p/q/r/s?tuvwxyz', text: 'b (c) d [e]',
@@ -55,13 +65,11 @@ suite("Extension Tests", async function () {
             ];
 
         for (const test of tests) {
-            console.log(JSON.stringify(test.line), test.index || test.line.length - 1);
-
+            console.log('\n\n\n', JSON.stringify(test.line), test.index || test.line.length - 1);
             const { line, index, ...expected } = test;
             const { text, path, pathComponents, query, fragment } = new LinkContextRecognizer(line, index || line.length - 1);
             const actual = { text, path, pathComponents, query, fragment };
-
-            assert.deepStrictEqual(actual, expected);
+            assert.deepStrictEqual(actual, expected, line);
         }
     });
 
@@ -123,7 +131,6 @@ suite("Extension Tests", async function () {
             ))!;
 
             assert.ok(items);
-            console.log(items);
 
             await commands.executeCommand('workbench.action.closeActiveEditor');
         } finally {
@@ -131,7 +138,7 @@ suite("Extension Tests", async function () {
         }
     });
 
-    xtest('LinkCompletionItemProvider full and partial mode', async () => {
+    test('LinkCompletionItemProvider full and partial mode', async () => {
         try {
             await fsExtra.writeFile(readmeMdFilePath, `
 # Test

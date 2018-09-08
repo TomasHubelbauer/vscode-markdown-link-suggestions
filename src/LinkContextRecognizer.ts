@@ -7,19 +7,33 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
   private pathComponentsReverse: string[] = [];
 
   // Solidified in unambiguous points
-  public text = '';
-  public path = '';
-  public pathComponents: string[] = [];
-  public query = '';
-  public fragment = '';
+  public text: string | null = null;
+  public path: string | null = null;
+  public pathComponents: string[] | null = null;
+  public query: string | null = null;
+  public fragment: string | null = null;
 
   constructor(line: string, index: number) {
     super();
     const handlers = Reflect.ownKeys(Reflect.getPrototypeOf(this)).filter(h => typeof h === 'string' && h !== 'constructor') as string[];
-    // Validate handlers are in the right other and there are no missing or extra handlers (after instantiation)
+    // Validate handlers are in the right other and there are no missing or extra handlers (after this class' instantiation)
     this.validate(handlers);
     // Run the parsing now that both the base class and this class have been fully instantiated
     this.parse(line, index);
+    // Cleanup/finalization for disambiguation which cannot be done by next character because we've consumed them all
+    if (this.text === null && this.pathCharactersReverse.length > 0) {
+      let text = this.pathCharactersReverse.reverse().join('');
+
+      if (text.startsWith('[')) {
+        text = text.slice(1);
+      }
+
+      if (text.endsWith(']')) {
+        text = text.slice(0, -1);
+      }
+
+      this.text = text;
+    }
   }
 
   /* URL */
@@ -31,12 +45,18 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
 
   // @ts-ignore
   private leftBraceUrl() {
-    throw new Error((this as any).name);
+    // Set text to empty in case we find only an opening brace of what could become a link
+    if (this.pathCharactersReverse.length === 0 && this.pathComponentsReverse.length === 0 && this.textCharactersReverse.length === 0) {
+      this.text = '';
+      return;
+    }
+
+    this.pathCharactersReverse.push(this.character);
   }
 
   // @ts-ignore
   private rightBraceUrl() {
-    throw new Error();
+    this.pathCharactersReverse.push(this.character);
   }
 
   // @ts-ignore
@@ -102,11 +122,17 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
 
   // @ts-ignore
   private rightBraceUrlTransition() {
-    this.pathComponentsReverse.push(this.pathCharactersReverse.reverse().join(''));
-    this.pathCharactersReverse = [];
-    this.pathComponents = this.pathComponentsReverse.reverse();
-    this.pathComponentsReverse = [];
-    this.path = this.pathComponents.join('/');
+    if (this.pathCharactersReverse.length > 0) {
+      this.pathComponentsReverse.push(this.pathCharactersReverse.reverse().join(''));
+      this.pathCharactersReverse = [];
+    }
+
+    if (this.pathComponentsReverse.length > 0) {
+      this.pathComponents = this.pathComponentsReverse.reverse();
+      this.pathComponentsReverse = [];
+      this.path = this.pathComponents.join('/');
+    }
+
     this.state = LinkContextRecognizerBase.STATE_TEXT;
   }
 
@@ -187,7 +213,9 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
 
   // @ts-ignore
   private queryUrlPriorHash() {
-    throw new Error();
+    this.query = this.pathCharactersReverse.reverse().join('');
+    this.pathCharactersReverse = [];
+    this.state = LinkContextRecognizerBase.STATE_URL_PRIOR_QUERY;
   }
 
   // @ts-ignore
@@ -264,9 +292,9 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
     }
 
     // If we previously thought we were in a query but it turned out we were in a hash, reset that
-    if (this.query !== '') {
+    if (this.query !== null) {
       this.fragment += '?' + this.query;
-      this.query = '';
+      this.query = null;
     }
   }
 
@@ -290,11 +318,17 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
 
   // @ts-ignore
   private rightBraceUrlPriorQueryTransition() {
-    this.pathComponentsReverse.push(this.pathCharactersReverse.reverse().join(''));
-    this.pathCharactersReverse = [];
-    this.pathComponents = this.pathComponentsReverse.reverse();
-    this.pathComponentsReverse = [];
-    this.path = this.pathComponents.join('/');
+    if (this.pathCharactersReverse.length > 0) {
+      this.pathComponentsReverse.push(this.pathCharactersReverse.reverse().join(''));
+      this.pathCharactersReverse = [];
+    }
+
+    if (this.pathComponentsReverse.length > 0) {
+      this.pathComponents = this.pathComponentsReverse.reverse();
+      this.pathComponentsReverse = [];
+      this.path = this.pathComponents.join('/');
+    }
+
     this.state = LinkContextRecognizerBase.STATE_TEXT;
   }
 
@@ -402,11 +436,17 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
 
   // @ts-ignore
   private rightBraceUrlPriorSlashTransition() {
-    this.pathComponentsReverse.push(this.pathCharactersReverse.reverse().join(''));
-    this.pathCharactersReverse = [];
-    this.pathComponents = this.pathComponentsReverse.reverse();
-    this.pathComponentsReverse = [];
-    this.path = this.pathComponents.join('/');
+    if (this.pathCharactersReverse.length > 0) {
+      this.pathComponentsReverse.push(this.pathCharactersReverse.reverse().join(''));
+      this.pathCharactersReverse = [];
+    }
+
+    if (this.pathComponentsReverse.length > 0) {
+      this.pathComponents = this.pathComponentsReverse.reverse();
+      this.pathComponentsReverse = [];
+      this.path = this.pathComponents.join('/');
+    }
+
     this.state = LinkContextRecognizerBase.STATE_TEXT;
   }
 

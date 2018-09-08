@@ -111,7 +111,8 @@ export default abstract class LinkContextRecognizerBase {
   }
 
   protected parse(line: string, index: number) {
-    for (index; index > 0; index--) {
+    const audit: any[] | undefined = [];
+    for (index; index >= 0; index--) {
       const triggerCharacters: { [name: string]: string; } = LinkContextRecognizerBase.TRIGGER_CHARACTERS;
       this.character = line[index];
       const isTriggerCharacter = LinkContextRecognizerBase.getTriggerCharacters().includes(this.character);
@@ -119,13 +120,31 @@ export default abstract class LinkContextRecognizerBase {
       if (isTriggerCharacter) {
         const triggerCharacter = Object.keys(triggerCharacters).find(key => triggerCharacters[key] === this.character);
         const handler = triggerCharacter + LinkContextRecognizerBase.capitalize(this.state);
-        console.log(JSON.stringify(this.character), index, handler);
+
+        // tslint:disable-next-line:no-unused-expression
+        audit !== undefined && audit.push({ index, ...JSON.parse(JSON.stringify(this)) });
+
         handlers[handler]();
+
+        // tslint:disable-next-line:no-unused-expression
+        audit !== undefined && audit.push({ index, ...JSON.parse(JSON.stringify(this)) });
       } else {
         const handler = LinkContextRecognizerBase.NON_TRIGGER + LinkContextRecognizerBase.capitalize(this.state);
         console.log(JSON.stringify(this.character), index, handler);
+
+        // tslint:disable-next-line:no-unused-expression
+        audit !== undefined && audit.push({ index, ...JSON.parse(JSON.stringify(this)) });
+
         handlers[handler]();
+
+        // tslint:disable-next-line:no-unused-expression
+        audit !== undefined && audit.push({ index, ...JSON.parse(JSON.stringify(this)) });
       }
+    }
+
+    if (audit !== undefined) {
+      console.log(JSON.stringify(line));
+      console.log(JSON.stringify(audit, null, 2))
     }
   }
 }
