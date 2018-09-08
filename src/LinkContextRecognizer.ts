@@ -62,6 +62,9 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
 
   // @ts-ignore
   private queryUrl() {
+    // 2 ways lead here - query in fragment & query in path, indistinguishable now, so we assume query and reset to fragment if needed
+    this.query = this.pathCharactersReverse.reverse().join('');
+    this.pathCharactersReverse = [];
     this.state = LinkContextRecognizerBase.STATE_URL_PRIOR_QUERY;
   }
 
@@ -99,9 +102,11 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
 
   // @ts-ignore
   private rightBraceUrlTransition() {
-    this.pathComponentsReverse.unshift(this.pathCharactersReverse.reverse().join(''));
+    this.pathComponentsReverse.push(this.pathCharactersReverse.reverse().join(''));
+    this.pathCharactersReverse = [];
     this.pathComponents = this.pathComponentsReverse.reverse();
-    this.path = this.pathComponentsReverse.reverse().join('/');
+    this.pathComponentsReverse = [];
+    this.path = this.pathComponents.join('/');
     this.state = LinkContextRecognizerBase.STATE_TEXT;
   }
 
@@ -199,10 +204,7 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
 
   // @ts-ignore
   private nonTriggerUrlPriorQuery() {
-    // 2 ways lead here - query in fragment & query in path, indistinguishable now, so we assume query and reset to fragment if needed
-    this.query = this.pathCharactersReverse.reverse().join('');
-    this.pathCharactersReverse = [];
-    this.state = LinkContextRecognizerBase.STATE_URL_PRIOR_QUERY;
+    this.pathCharactersReverse.push(this.character);
   }
 
   // @ts-ignore
@@ -238,20 +240,34 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
 
   // @ts-ignore
   private queryUrlPriorQuery() {
-    throw new Error();
+    this.query = this.pathCharactersReverse.reverse().join('');
+    this.pathCharactersReverse = [];
   }
 
   // @ts-ignore
   private hashUrlPriorQuery() {
-    console.log(this);
+    this.fragment = '';
+
+    // If we previously thought we were in a path but it turned out we were in a hash, reset that
+    if (this.pathCharactersReverse.length > 0) {
+      this.fragment += this.pathCharactersReverse.reverse().join('');
+      this.pathCharactersReverse = [];
+    }
+
+    if (this.pathComponentsReverse.length > 0) {
+      if (this.fragment.length > 0) {
+        this.fragment += '/';
+      }
+
+      this.fragment += this.pathComponentsReverse.reverse().join('/');
+      this.pathComponentsReverse = [];
+    }
 
     // If we previously thought we were in a query but it turned out we were in a hash, reset that
     if (this.query !== '') {
-
+      this.fragment += '?' + this.query;
+      this.query = '';
     }
-
-    // If we previously thought we were in a path but it turned out we were in a hash, reset that
-    throw new Error();
   }
 
   // @ts-ignore
@@ -274,7 +290,12 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
 
   // @ts-ignore
   private rightBraceUrlPriorQueryTransition() {
-    throw new Error();
+    this.pathComponentsReverse.push(this.pathCharactersReverse.reverse().join(''));
+    this.pathCharactersReverse = [];
+    this.pathComponents = this.pathComponentsReverse.reverse();
+    this.pathComponentsReverse = [];
+    this.path = this.pathComponents.join('/');
+    this.state = LinkContextRecognizerBase.STATE_TEXT;
   }
 
   // @ts-ignore
@@ -336,7 +357,7 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
 
   // @ts-ignore
   private forwardSlashUrlPriorSlash() {
-    this.pathComponentsReverse.push(this.pathCharactersReverse.reverse().join(''));
+    this.pathComponentsReverse.push(this.pathCharactersReverse.slice().reverse().join(''));
     this.pathCharactersReverse = [];
   }
 
@@ -381,9 +402,11 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
 
   // @ts-ignore
   private rightBraceUrlPriorSlashTransition() {
-    this.pathComponentsReverse.unshift(this.pathCharactersReverse.reverse().join(''));
+    this.pathComponentsReverse.push(this.pathCharactersReverse.reverse().join(''));
+    this.pathCharactersReverse = [];
     this.pathComponents = this.pathComponentsReverse.reverse();
-    this.path = this.pathComponentsReverse.reverse().join('/');
+    this.pathComponentsReverse = [];
+    this.path = this.pathComponents.join('/');
     this.state = LinkContextRecognizerBase.STATE_TEXT;
   }
 
@@ -432,46 +455,48 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
 
   // @ts-ignore
   private leftBraceText() {
-    this.text = this.textCharactersReverse.reverse().join('');
+    this.text = this.textCharactersReverse.slice().reverse().join('');
+    // Continue in case this is a red herring and not the final brace
+    this.textCharactersReverse.push(this.character);
   }
 
   // @ts-ignore
   private rightBraceText() {
-    throw new Error();
+    this.textCharactersReverse.push(this.character);
   }
 
   // @ts-ignore
   private leftParenText() {
-    throw new Error();
+    this.textCharactersReverse.push(this.character);
   }
 
   // @ts-ignore
   private forwardSlashText() {
-    throw new Error();
+    this.textCharactersReverse.push(this.character);
   }
 
   // @ts-ignore
   private backwardSlashText() {
-    throw new Error();
+    this.textCharactersReverse.push(this.character);
   }
 
   // @ts-ignore
   private spaceText() {
-    throw new Error();
+    this.textCharactersReverse.push(this.character);
   }
 
   // @ts-ignore
   private queryText() {
-    throw new Error();
+    this.textCharactersReverse.push(this.character);
   }
 
   // @ts-ignore
   private hashText() {
-    throw new Error();
+    this.textCharactersReverse.push(this.character);
   }
 
   // @ts-ignore
   private rightParenText() {
-    throw new Error();
+    this.textCharactersReverse.push(this.character);
   }
 }
