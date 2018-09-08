@@ -33,7 +33,7 @@ export default function* getFileLinks(textDocument: TextDocument) {
         continue;
       }
 
-      // TODO: Do not use a Uri here because most targets are not valid Uris without a scheme!
+      // TODO: https://github.com/Microsoft/vscode/issues/58250
       const uri = Uri.parse(target);
       if (uri.scheme && uri.scheme !== 'file') {
         continue;
