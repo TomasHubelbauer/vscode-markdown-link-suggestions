@@ -1,7 +1,6 @@
-import { CompletionItemProvider, TextDocument, Position, CancellationToken, CompletionContext, CompletionItem, Range, CompletionItemKind, workspace, RelativePattern, TextEdit, Uri } from "vscode";
+import { CompletionItemProvider, TextDocument, Position, CancellationToken, CompletionContext, CompletionItem, Range, CompletionItemKind, workspace, RelativePattern, TextEdit, Uri, commands, SymbolInformation, SymbolKind } from "vscode";
 import LinkContextRecognizer from "./LinkContextRecognizer";
 import { dirname, extname, basename, relative, normalize } from "path";
-import getHeaders from "./getHeaders";
 import anchorize from "./anchorize";
 
 export default class LinkCompletionItemProvider implements CompletionItemProvider {
@@ -22,7 +21,7 @@ export default class LinkCompletionItemProvider implements CompletionItemProvide
       position.character
     );
 
-    console.log(text, path, pathComponents, query, fragment);
+    console.log({ line: document.lineAt(position.line).text, text, path, pathComponents, query, fragment });
 
 
     const character = context.triggerCharacter || /* Ctrl + Space */ document.getText(new Range(position.translate(0, -1), position));
@@ -58,7 +57,9 @@ export default class LinkCompletionItemProvider implements CompletionItemProvide
         if (character === '#' && document.getText(headerLinkConfirmationRange) === '](#') {
           partialSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ')';
           // Only suggest local file headers
-          for (const header of getHeaders(document)) {
+          const symbols = await commands.executeCommand('vscode.executeWorkspaceSymbolProvider', '') as SymbolInformation[];
+          const headers = symbols.filter(symbol => symbol.location.uri === document.uri && symbol.kind === SymbolKind.String);
+          for (const header of headers) {
             items.push(this.item(CompletionItemKind.Reference, document.uri.fsPath, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange, true));
           }
 
@@ -91,8 +92,10 @@ export default class LinkCompletionItemProvider implements CompletionItemProvide
 
       items.push(this.item(CompletionItemKind.File, file.fsPath, null, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
       if (extname(file.fsPath).toUpperCase() === '.MD' && this.allowSuggestionsForHeaders) {
-        for (const { order, text } of getHeaders(await workspace.openTextDocument(file))) {
-          items.push(this.item(CompletionItemKind.Reference, file.fsPath, { order, text }, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
+        const symbols = await commands.executeCommand('vscode.executeWorkspaceSymbolProvider', '') as SymbolInformation[];
+        const headers = symbols.filter(symbol => symbol.location.uri === file && symbol.kind === SymbolKind.String);
+        for (const header of headers) {
+          items.push(this.item(CompletionItemKind.Reference, file.fsPath, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
         }
       }
     }
@@ -113,12 +116,12 @@ export default class LinkCompletionItemProvider implements CompletionItemProvide
     return items;
   }
 
-  private item(kind: CompletionItemKind, absoluteFilePath: string, header: { order: number; text: string; } | null, absoluteDocumentDirectoryPath: string, fullSuggestMode: boolean, fullSuggestModeBraceCompleted: boolean, partialSuggestModeBraceCompleted: boolean, braceCompletionRange: Range, hack?: boolean) {
+  private item(kind: CompletionItemKind, absoluteFilePath: string, headerSymbol: SymbolInformation | null, absoluteDocumentDirectoryPath: string, fullSuggestMode: boolean, fullSuggestModeBraceCompleted: boolean, partialSuggestModeBraceCompleted: boolean, braceCompletionRange: Range, hack?: boolean) {
     // Extract and join the file name with header (if any) for displaying in the label
     const fileName = basename(absoluteFilePath);
     let fileNameWithHeader = fileName;
-    if (header !== null) {
-      fileNameWithHeader = hack ? header.text : (fileNameWithHeader + ' # ' + header.text);
+    if (headerSymbol !== null) {
+      fileNameWithHeader = hack ? headerSymbol.name : (fileNameWithHeader + ' # ' + headerSymbol.name);
     }
 
     // Put together a label in a `name#header (directory if not current)` format
@@ -131,11 +134,11 @@ export default class LinkCompletionItemProvider implements CompletionItemProvide
     // Construct the completion item based on the label and the provided kind
     const item = new CompletionItem(label, kind);
     // Display standalone header, otherwise fall back to displaying the name we then know doesn't have fragment (header)
-    item.detail = header ? header.text : fileName;
+    item.detail = headerSymbol !== null ? headerSymbol.name : fileName;
     // Display expanded and normalized absolute path for inspection
     item.documentation = normalize(absoluteFilePath);
     // Derive anchorized version of the header to ensure working linkage
-    const anchor = header === null ? '' : anchorize(header.text);
+    const anchor = headerSymbol === null ? '' : anchorize(headerSymbol.name);
     // Compute suggested file path relative to the currently edited file's directory path
     let relativeFilePath = relative(absoluteDocumentDirectoryPath, absoluteFilePath) || '.';
     // TODO: URL encode path minimally (to make VS Code work, like replacing + sign and other otherwise linkage breaking characters)
@@ -154,9 +157,11 @@ export default class LinkCompletionItemProvider implements CompletionItemProvide
     // Sort by the relative path name for now (predictable but not amazingly helpful)
     // TODO: Contribute a setting for sorting by timestamp then by this
     item.sortText = relativeFilePath; // TODO
-    if (header !== null) {
+    if (headerSymbol !== null) {
       // Sort headers in the document order
-      item.sortText += ` ${header.order.toString().padStart(5, '0')} # ${header.text}`;
+      const linePadded = headerSymbol.location.range.start.line.toString().padStart(5, '0');
+      const characterPadded = headerSymbol.location.range.start.character.toString().padStart(5, '0');
+      item.sortText += ` ${linePadded}${characterPadded} # ${headerSymbol.name}`;
     }
 
     // Offer both forwards slash and backwards slash filter paths so that the user can type regardless of the platform

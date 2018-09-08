@@ -1,9 +1,8 @@
 import * as fsExtra from 'fs-extra';
-import { DiagnosticCollection, FileSystemWatcher, languages, workspace, RelativePattern, TextDocument, Diagnostic, DiagnosticSeverity, Uri } from "vscode";
+import { DiagnosticCollection, FileSystemWatcher, languages, workspace, RelativePattern, TextDocument, Diagnostic, DiagnosticSeverity, Uri, commands, SymbolInformation, SymbolKind } from "vscode";
 import drainAsyncIterator from './drainAsyncIterator';
 import getFileLinks from './getFileLinks';
 import resolvePath from './resolvePath';
-import getHeaders from './getHeaders';
 import anchorize from './anchorize';
 
 export default class LinkDiagnosticProvider {
@@ -53,7 +52,7 @@ export default class LinkDiagnosticProvider {
   // TODO: Use MarkDownDOM for finding the links within the document
   public async *provideDiagnostics(textDocument: TextDocument): AsyncIterableIterator<Diagnostic> {
     for (const link of getFileLinks(textDocument)) {
-      const absolutePath = resolvePath(textDocument, link.uri);
+      const absolutePath = resolvePath(textDocument, link.uri.fsPath);
       if (!await fsExtra.pathExists(absolutePath)) {
         const diagnostic = new Diagnostic(link.uriRange, `The path ${absolutePath} doesn't exist on the disk.`, DiagnosticSeverity.Error);
         diagnostic.source = 'MarkDown Link Suggestions';
@@ -65,9 +64,12 @@ export default class LinkDiagnosticProvider {
 
       if (link.uri.fragment !== '' && (await fsExtra.stat(absolutePath)).isFile()) {
         let headerExists = false;
-        for (const { text } of getHeaders(await workspace.openTextDocument(absolutePath))) {
+        const symbols = await commands.executeCommand('vscode.executeWorkspaceSymbolProvider', '') as SymbolInformation[];
+        const uri = Uri.file(absolutePath);
+        const headers = symbols.filter(symbol => symbol.location.uri === uri && symbol.kind === SymbolKind.String);
+        for (const header of headers) {
           // Remove periods in fragment because the extension used to not remove them and thus generated fragments which are now invalid
-          if (anchorize(text) === link.uri.fragment.replace('.', '')) {
+          if (anchorize(header.name) === link.uri.fragment.replace('.', '')) {
             headerExists = true;
             break;
           }
