@@ -43,11 +43,25 @@ export default abstract class LinkContextRecognizerBase {
   protected state: keyof typeof LinkContextRecognizerBase.STATES = LinkContextRecognizerBase.STATE_URL;
   protected character: string = '';
 
+  private audit: ((message: object) => void) | undefined;
+  protected constructor(audit?: (message: object) => void) {
+    this.audit = audit;
+  }
+
   private static capitalize(value: string) {
     return value[0].toUpperCase() + value.slice(1);
   }
 
   protected validate(handlers: string[]) {
+    let error = '\n';
+
+    const disambiguateIndex = handlers.indexOf('disambiguate');
+    if (disambiguateIndex === -1) {
+      //error += `You must implement the 'disambiguate' handler called at the end of the line. \n`;
+    } else {
+      handlers.splice(disambiguateIndex, 1);
+    }
+
     const requiredHandlers =
       Object
         .keys(LinkContextRecognizerBase.STATES)
@@ -64,8 +78,6 @@ export default abstract class LinkContextRecognizerBase {
     const missingHandlers = requiredHandlers.filter(h => !handlers.includes(h));
     const extraHandlers = handlers.filter(h => !requiredHandlers.includes(h));
     const unorderedHandlers = handlers.filter(h => requiredHandlers.indexOf(h) !== handlers.indexOf(h));
-
-    let error = '\n';
 
     if (missingHandlers.length > 0) {
       error += `${missingHandlers.length} handlers are missing:\n\n`;
@@ -110,8 +122,9 @@ export default abstract class LinkContextRecognizerBase {
     }
   }
 
+  protected abstract disambiguate(): void;
+
   protected parse(line: string, index: number) {
-    const audit: any[] | undefined = [];
     for (index; index >= 0; index--) {
       const triggerCharacters: { [name: string]: string; } = LinkContextRecognizerBase.TRIGGER_CHARACTERS;
       this.character = line[index];
@@ -121,30 +134,38 @@ export default abstract class LinkContextRecognizerBase {
         const triggerCharacter = Object.keys(triggerCharacters).find(key => triggerCharacters[key] === this.character);
         const handler = triggerCharacter + LinkContextRecognizerBase.capitalize(this.state);
 
-        // tslint:disable-next-line:no-unused-expression
-        audit !== undefined && audit.push({ index, ...JSON.parse(JSON.stringify(this)) });
+        if (this.audit !== undefined) {
+          this.audit({ line, index, handler, stage: 'enter', ...JSON.parse(JSON.stringify(this)) });
+        }
 
         handlers[handler]();
 
-        // tslint:disable-next-line:no-unused-expression
-        audit !== undefined && audit.push({ index, ...JSON.parse(JSON.stringify(this)) });
+        if (this.audit !== undefined) {
+          this.audit({ line, index, handler, stage: 'exit', ...JSON.parse(JSON.stringify(this)) });
+        }
       } else {
         const handler = LinkContextRecognizerBase.NON_TRIGGER + LinkContextRecognizerBase.capitalize(this.state);
-        console.log(JSON.stringify(this.character), index, handler);
 
-        // tslint:disable-next-line:no-unused-expression
-        audit !== undefined && audit.push({ index, ...JSON.parse(JSON.stringify(this)) });
+        if (this.audit !== undefined) {
+          this.audit({ line, index, handler, stage: 'enter', ...JSON.parse(JSON.stringify(this)) });
+        }
 
         handlers[handler]();
 
-        // tslint:disable-next-line:no-unused-expression
-        audit !== undefined && audit.push({ index, ...JSON.parse(JSON.stringify(this)) });
+        if (this.audit !== undefined) {
+          this.audit({ line, index, handler, stage: 'exit', ...JSON.parse(JSON.stringify(this)) });
+        }
       }
     }
 
-    if (audit !== undefined) {
-      console.log(JSON.stringify(line));
-      console.log(JSON.stringify(audit, null, 2))
+    if (this.audit !== undefined) {
+      this.audit({ line, index, handler: 'disambiguate', stage: 'exit', ...JSON.parse(JSON.stringify(this)) });
+    }
+
+    this.disambiguate();
+
+    if (this.audit !== undefined) {
+      this.audit({ line, index, handler: 'disambiguate', stage: 'exit', ...JSON.parse(JSON.stringify(this)) });
     }
   }
 }

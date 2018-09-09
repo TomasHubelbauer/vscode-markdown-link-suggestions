@@ -26,50 +26,68 @@ suite("Extension Tests", async function () {
 
     test('LinkContextRecognizer', async () => {
         // TODO: Introduce combinatorically generated tests
-        const tests: { line: string; index?: number; text: string | null; path: string | null; pathComponents: string[] | null; query: string | null; fragment: string | null; }[] =
+        const tests: {
+            line: string;
+            context: 'text' | 'transition' /* TODO: `scheme`? */ | 'path' | 'query' | 'fragment' | null;
+            text: string | null;
+            // TODO: `scheme`?
+            path: string | null;
+            pathComponents: string[] | null;
+            query: string | null;
+            fragment: string | null;
+        }[] =
             [
-                // TODO: Introduce a new field called `transitioned` for `](` so that we can know to suggest inserting `(`
-                { line: '[', text: '', path: null, pathComponents: null, query: null, fragment: null },
-                { line: '(', text: null, path: null, pathComponents: null, query: null, fragment: null },
-                { line: '[link](test#a[b]', text: 'link', path: 'test', pathComponents: ['test'], query: null, fragment: 'a[b]' },
-                { line: '[link]', text: 'link', path: null, pathComponents: null, query: null, fragment: null },
-                { line: '[link](', text: 'link', path: '', pathComponents: [], query: null, fragment: null },
-                { line: '[link]()', text: 'link', path: '', pathComponents: [], query: null, fragment: null },
-                { line: '[link](a', text: 'link', path: 'a', pathComponents: ['a'], query: null, fragment: null },
-                { line: '[link](#', text: 'link', path: '', pathComponents: [], query: null, fragment: '' },
-                { line: '[link](#header', text: 'link', path: '', pathComponents: [], query: null, fragment: 'header' },
-                { line: '[link](a#', text: 'link', path: 'a', pathComponents: ['a'], query: null, fragment: '' },
-                { line: '[link](a?', text: 'link', path: 'a', pathComponents: ['a'], query: '', fragment: null },
-                { line: '[link](a?#', text: 'link', path: 'a', pathComponents: ['a'], query: '', fragment: '' },
+                { line: 'not link [link](path', context: 'path', text: 'link', path: 'path', pathComponents: ['path'], query: null, fragment: null },
+                { line: 'not link [link](path)', context: null, text: 'link', path: 'path', pathComponents: ['path'], query: null, fragment: null },
+                { line: '[', context: null, text: '', path: null, pathComponents: null, query: null, fragment: null },
+                // TODO: Maybe suggest `(…)` before?
+                { line: '[', context: null, text: '', path: null, pathComponents: null, query: null, fragment: null },
+                { line: '[link', context: 'text', text: 'link', path: null, pathComponents: null, query: null, fragment: null },
+                // TODO: Maybe suggest text?
+                { line: '(', context: null, text: null, path: null, pathComponents: null, query: null, fragment: null },
+                // TODO: Maybe suggest `[…`?
+                { line: '()', context: null, text: null, path: null, pathComponents: null, query: null, fragment: null },
+                { line: '()[', context: 'text', text: '', path: null, pathComponents: null, query: null, fragment: null },
+                { line: '[link](test#a[b]', context: 'path', text: 'link', path: 'test', pathComponents: ['test'], query: null, fragment: 'a[b]' },
+                { line: '[link]', context: 'transition', text: 'link', path: null, pathComponents: null, query: null, fragment: null },
+                { line: '[link](', context: 'path', text: 'link', path: '', pathComponents: [], query: null, fragment: null },
+                { line: '[link]()', context: null, text: 'link', path: '', pathComponents: [], query: null, fragment: null },
+                { line: '[link](a', context: 'path', text: 'link', path: 'a', pathComponents: ['a'], query: null, fragment: null },
+                { line: '[link](a)', context: 'path', text: 'link', path: 'a', pathComponents: ['a'], query: null, fragment: null },
+                { line: '[link](#', context: 'fragment', text: 'link', path: '', pathComponents: [], query: null, fragment: '' },
+                { line: '[link](#header', context: 'fragment', text: 'link', path: '', pathComponents: [], query: null, fragment: 'header' },
+                { line: '[link](a#', context: 'fragment', text: 'link', path: 'a', pathComponents: ['a'], query: null, fragment: '' },
+                { line: '[link](a?', context: 'query', text: 'link', path: 'a', pathComponents: ['a'], query: '', fragment: null },
+                { line: '[link](a?#', context: 'fragment', text: 'link', path: 'a', pathComponents: ['a'], query: '', fragment: '' },
                 {
-                    line: ' [link](README.md', text: 'link',
+                    line: ' [link](README.md', context: 'path', text: 'link',
                     path: 'README.md', pathComponents: ['README.md'], query: null, fragment: null,
                 },
                 {
-                    line: ' [link](README.md)', text: 'link',
+                    line: ' [link](README.md)', context: null, text: 'link',
                     path: 'README.md', pathComponents: ['README.md'], query: null, fragment: null,
                 },
                 {
-                    line: ' [link](README.md#header)', text: 'link',
+                    line: ' [link](README.md#header)', context: 'fragment', text: 'link',
                     path: 'README.md', pathComponents: ['README.md'], query: null, fragment: 'header',
                 },
                 {
-                    line: ' [link](nested/README.md)', text: 'link',
+                    line: ' [link](nested/README.md)', context: null, text: 'link',
                     path: 'nested/README.md', pathComponents: ['nested', 'README.md'], query: null, fragment: null,
                 },
                 {
-                    line: 'a [b (c) d [e]](./f/g(h)/i/j.k?test#l-m-(n)-o.p/q/r/s?tuvwxyz', text: 'b (c) d [e]',
+                    line: 'a [b (c) d [e]](./f/g(h)/i/j.k?test#l-m-(n)-o.p/q/r/s?tuvwxyz', context: 'fragment', text: 'b (c) d [e]',
                     path: './f/g(h)/i/j.k', pathComponents: ['.', 'f', 'g(h)', 'i', 'j.k'],
                     query: 'test', fragment: 'l-m-(n)-o.p/q/r/s?tuvwxyz',
                 },
             ];
 
         for (const test of tests) {
-            console.log('\n\n\n', JSON.stringify(test.line), test.index || test.line.length - 1);
-            const { line, index, ...expected } = test;
-            const { text, path, pathComponents, query, fragment } = new LinkContextRecognizer(line, index || line.length - 1);
-            const actual = { text, path, pathComponents, query, fragment };
-            assert.deepStrictEqual(actual, expected, line);
+            const audit: object[] = [];
+            const { line, ...expected } = test;
+            const { context, text, path, pathComponents, query, fragment } = new LinkContextRecognizer(line, line.length - 1, message => audit.push(message));
+            const actual = { context, text, path, pathComponents, query, fragment };
+            assert.deepStrictEqual(actual, expected, JSON.stringify(audit, null, 2));
         }
     });
 
@@ -138,7 +156,7 @@ suite("Extension Tests", async function () {
         }
     });
 
-    test('LinkCompletionItemProvider full and partial mode', async () => {
+    xtest('LinkCompletionItemProvider full and partial mode', async () => {
         try {
             await fsExtra.writeFile(readmeMdFilePath, `
 # Test

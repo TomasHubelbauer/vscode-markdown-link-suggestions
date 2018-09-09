@@ -7,20 +7,24 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
   private pathComponentsReverse: string[] = [];
 
   // Solidified in unambiguous points
+  public context: 'text' | 'transition' | /* TODO: `scheme`? */ 'path' | 'query' | 'fragment' | null = null;
   public text: string | null = null;
   public path: string | null = null;
   public pathComponents: string[] | null = null;
   public query: string | null = null;
   public fragment: string | null = null;
 
-  constructor(line: string, index: number) {
-    super();
+  constructor(line: string, index: number, audit?: (message: object) => void) {
+    super(audit);
     const handlers = Reflect.ownKeys(Reflect.getPrototypeOf(this)).filter(h => typeof h === 'string' && h !== 'constructor') as string[];
     // Validate handlers are in the right other and there are no missing or extra handlers (after this class' instantiation)
     this.validate(handlers);
     // Run the parsing now that both the base class and this class have been fully instantiated
     this.parse(line, index);
-    // Cleanup/finalization for disambiguation which cannot be done by next character because we've consumed them all
+  }
+
+  protected disambiguate() {
+    // Disambiguate `[text]`
     if (this.text === null && this.pathCharactersReverse.length > 0) {
       let text = this.pathCharactersReverse.reverse().join('');
 
@@ -34,6 +38,10 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
 
       this.text = text;
     }
+
+    if (this.context === null && this.text !== null) {
+
+    }
   }
 
   /* URL */
@@ -45,7 +53,16 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
 
   // @ts-ignore
   private leftBraceUrl() {
-    // Set text to empty in case we find only an opening brace of what could become a link
+    if (this.path === null && this.pathCharactersReverse.length > 0) {
+      // Set context and text as we've had `[this` or `[that]`
+      this.context = 'text';
+      this.text = this.pathCharactersReverse.reverse().join('');
+    } else {
+      // Set context as cursor is on `[`
+      this.context = 'path';
+    }
+
+    // Bail if we only have opening brace `[`
     if (this.pathCharactersReverse.length === 0 && this.pathComponentsReverse.length === 0 && this.textCharactersReverse.length === 0) {
       this.text = '';
       return;
@@ -131,7 +148,12 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
       this.pathComponents = this.pathComponentsReverse.reverse();
       this.pathComponentsReverse = [];
       this.path = this.pathComponents.join('/');
+    } else {
+      // Indicate )[ was present by setting a non-empty path
+      this.path = '';
     }
+
+
 
     this.state = LinkContextRecognizerBase.STATE_TEXT;
   }
