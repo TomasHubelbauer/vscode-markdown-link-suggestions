@@ -1,14 +1,11 @@
 import * as assert from 'assert';
-import { workspace, CancellationTokenSource, CompletionTriggerKind, window, commands, CompletionItemKind, Range, DiagnosticSeverity } from 'vscode';
+import { workspace, window, commands, CompletionItemKind, Range, DiagnosticSeverity, CompletionList, DocumentLink } from 'vscode';
 import * as path from 'path';
 import * as fsExtra from 'fs-extra';
 import LinkContextRecognizer from '../LinkContextRecognizer';
 import LinkDiagnosticProvider from '../LinkDiagnosticProvider';
 import drainAsyncIterator from '../drainAsyncIterator';
-import LinkCompletionItemProvider from '../LinkCompletionItemProvider';
-import LinkDocumentLinkProvider from '../LinkDocumentLinkProvider';
 
-// TODO: Extend full/partial suggest mode with a check for the full mode disabling setting
 suite("Extension Tests", async function () {
     assert.ok(workspace.workspaceFolders);
 
@@ -16,7 +13,6 @@ suite("Extension Tests", async function () {
 
     }
 
-    const token = new CancellationTokenSource().token;
     const workspaceDirectoryPath = workspace.workspaceFolders![0].uri.fsPath;
     const readmeMdFilePath = path.join(workspaceDirectoryPath, 'README.md');
     const testMdFilePath = path.join(workspaceDirectoryPath, 'test.md');
@@ -28,7 +24,7 @@ suite("Extension Tests", async function () {
         // TODO: Introduce combinatorically generated tests
         const tests: {
             line: string;
-            context: 'text' | 'transition' /* TODO: `scheme`? */ | 'path' | 'query' | 'fragment' | null;
+            cursor: 'text' | 'transition' /* TODO: `scheme`? */ | 'path' | 'query' | 'fragment' | null;
             text: string | null;
             // TODO: `scheme`?
             path: string | null;
@@ -37,46 +33,47 @@ suite("Extension Tests", async function () {
             fragment: string | null;
         }[] =
             [
-                { line: 'not link [link](path', context: 'path', text: 'link', path: 'path', pathComponents: ['path'], query: null, fragment: null },
-                { line: 'not link [link](path)', context: null, text: 'link', path: 'path', pathComponents: ['path'], query: null, fragment: null },
-                { line: '[', context: null, text: '', path: null, pathComponents: null, query: null, fragment: null },
+                { line: 'not link [link](path', cursor: 'path', text: 'link', path: 'path', pathComponents: ['path'], query: null, fragment: null },
+                // Skip parsing link if cursor is placed after it
+                { line: 'not link [link](path)', cursor: null, text: null, path: null, pathComponents: null, query: null, fragment: null },
+                { line: 'hello [', cursor: 'text', text: '', path: null, pathComponents: null, query: null, fragment: null },
                 // TODO: Maybe suggest `(…)` before?
-                { line: '[', context: null, text: '', path: null, pathComponents: null, query: null, fragment: null },
-                { line: '[link', context: 'text', text: 'link', path: null, pathComponents: null, query: null, fragment: null },
-                // TODO: Maybe suggest text?
-                { line: '(', context: null, text: null, path: null, pathComponents: null, query: null, fragment: null },
-                // TODO: Maybe suggest `[…`?
-                { line: '()', context: null, text: null, path: null, pathComponents: null, query: null, fragment: null },
-                { line: '()[', context: 'text', text: '', path: null, pathComponents: null, query: null, fragment: null },
-                { line: '[link](test#a[b]', context: 'path', text: 'link', path: 'test', pathComponents: ['test'], query: null, fragment: 'a[b]' },
-                { line: '[link]', context: 'transition', text: 'link', path: null, pathComponents: null, query: null, fragment: null },
-                { line: '[link](', context: 'path', text: 'link', path: '', pathComponents: [], query: null, fragment: null },
-                { line: '[link]()', context: null, text: 'link', path: '', pathComponents: [], query: null, fragment: null },
-                { line: '[link](a', context: 'path', text: 'link', path: 'a', pathComponents: ['a'], query: null, fragment: null },
-                { line: '[link](a)', context: 'path', text: 'link', path: 'a', pathComponents: ['a'], query: null, fragment: null },
-                { line: '[link](#', context: 'fragment', text: 'link', path: '', pathComponents: [], query: null, fragment: '' },
-                { line: '[link](#header', context: 'fragment', text: 'link', path: '', pathComponents: [], query: null, fragment: 'header' },
-                { line: '[link](a#', context: 'fragment', text: 'link', path: 'a', pathComponents: ['a'], query: null, fragment: '' },
-                { line: '[link](a?', context: 'query', text: 'link', path: 'a', pathComponents: ['a'], query: '', fragment: null },
-                { line: '[link](a?#', context: 'fragment', text: 'link', path: 'a', pathComponents: ['a'], query: '', fragment: '' },
+                { line: 'nada [', cursor: 'text', text: '', path: null, pathComponents: null, query: null, fragment: null },
+                { line: 'nada [link', cursor: 'text', text: 'link', path: null, pathComponents: null, query: null, fragment: null },
+                // TODO: Maybe suggest prepending text?
+                { line: 'INVALID (', cursor: 'text', text: null, path: null, pathComponents: null, query: null, fragment: null },
+                // TODO: Maybe suggest prepending text?
+                { line: 'INVALID ()', cursor: null, text: null, path: null, pathComponents: null, query: null, fragment: null },
+                { line: 'INVALID ()[', cursor: null, text: null, path: null, pathComponents: null, query: null, fragment: null },
+                { line: 'nada [link](test#a[b]', cursor: 'transition', text: 'b', path: null, pathComponents: null, query: null, fragment: null },
+                { line: 'nada [link]', cursor: 'transition', text: 'link', path: null, pathComponents: null, query: null, fragment: null },
+                { line: 'nada [link](', cursor: 'path', text: 'link', path: '', pathComponents: [], query: null, fragment: null },
+                { line: 'nada [link]()', cursor: null, text: 'link', path: '', pathComponents: [], query: null, fragment: null },
+                { line: 'nada [link](a', cursor: 'path', text: 'link', path: 'a', pathComponents: ['a'], query: null, fragment: null },
+                { line: 'nada [link](a)', cursor: 'path', text: 'link', path: 'a', pathComponents: ['a'], query: null, fragment: null },
+                { line: 'nada [link](#', cursor: 'fragment', text: 'link', path: '', pathComponents: [], query: null, fragment: '' },
+                { line: 'nada [link](#header', cursor: 'fragment', text: 'link', path: '', pathComponents: [], query: null, fragment: 'header' },
+                { line: 'nada [link](a#', cursor: 'fragment', text: 'link', path: 'a', pathComponents: ['a'], query: null, fragment: '' },
+                { line: 'nada [link](a?', cursor: 'query', text: 'link', path: 'a', pathComponents: ['a'], query: '', fragment: null },
+                { line: 'nada [link](a?#', cursor: 'fragment', text: 'link', path: 'a', pathComponents: ['a'], query: '', fragment: '' },
                 {
-                    line: ' [link](README.md', context: 'path', text: 'link',
+                    line: ' [link](README.md', cursor: 'path', text: 'link',
                     path: 'README.md', pathComponents: ['README.md'], query: null, fragment: null,
                 },
                 {
-                    line: ' [link](README.md)', context: null, text: 'link',
+                    line: ' [link](README.md)', cursor: null, text: 'link',
                     path: 'README.md', pathComponents: ['README.md'], query: null, fragment: null,
                 },
                 {
-                    line: ' [link](README.md#header)', context: 'fragment', text: 'link',
+                    line: ' [link](README.md#header)', cursor: 'fragment', text: 'link',
                     path: 'README.md', pathComponents: ['README.md'], query: null, fragment: 'header',
                 },
                 {
-                    line: ' [link](nested/README.md)', context: null, text: 'link',
+                    line: ' [link](nested/README.md)', cursor: null, text: 'link',
                     path: 'nested/README.md', pathComponents: ['nested', 'README.md'], query: null, fragment: null,
                 },
                 {
-                    line: 'a [b (c) d [e]](./f/g(h)/i/j.k?test#l-m-(n)-o.p/q/r/s?tuvwxyz', context: 'fragment', text: 'b (c) d [e]',
+                    line: 'a [b (c) d [e]](./f/g(h)/i/j.k?test#l-m-(n)-o.p/q/r/s?tuvwxyz', cursor: 'fragment', text: 'b (c) d [e]',
                     path: './f/g(h)/i/j.k', pathComponents: ['.', 'f', 'g(h)', 'i', 'j.k'],
                     query: 'test', fragment: 'l-m-(n)-o.p/q/r/s?tuvwxyz',
                 },
@@ -85,8 +82,8 @@ suite("Extension Tests", async function () {
         for (const test of tests) {
             const audit: object[] = [];
             const { line, ...expected } = test;
-            const { context, text, path, pathComponents, query, fragment } = new LinkContextRecognizer(line, line.length - 1, message => audit.push(message));
-            const actual = { context, text, path, pathComponents, query, fragment };
+            const { cursor, text, path, pathComponents, query, fragment } = new LinkContextRecognizer(line, line.length - 1, message => audit.push(message));
+            const actual = { cursor, text, path, pathComponents, query, fragment };
             assert.deepStrictEqual(actual, expected, JSON.stringify(audit, null, 2));
         }
     });
@@ -109,7 +106,9 @@ suite("Extension Tests", async function () {
             const textDocument = await workspace.openTextDocument(readmeMdFilePath);
             await commands.executeCommand('workbench.action.files.revert', textDocument.uri); // Reload from disk
             await window.showTextDocument(textDocument);
-            const links = new LinkDocumentLinkProvider().provideDocumentLinks(textDocument, token);
+
+            // https://code.visualstudio.com/docs/extensionAPI/vscode-api-commands
+            const links = await commands.executeCommand('vscode.executeLinkProvider', textDocument.uri) as DocumentLink[];
 
             assert.equal(links.length, 4);
             assert.ok(links[0].range.isEqual(new Range(1, 1, 1, 5)));
@@ -141,12 +140,8 @@ suite("Extension Tests", async function () {
             const textEditor = await window.showTextDocument(textDocument);
             await textEditor.edit(editBuilder => editBuilder.insert(textDocument.lineAt(textDocument.lineCount - 1).rangeIncludingLineBreak.end, '\n' + '[link](#h'));
 
-            const items = (await new LinkCompletionItemProvider(true, true).provideCompletionItems(
-                textDocument,
-                textDocument.lineAt(textDocument.lineCount - 1).range.end,
-                token,
-                { triggerKind: CompletionTriggerKind.Invoke }
-            ))!;
+            // https://code.visualstudio.com/docs/extensionAPI/vscode-api-commands
+            const { items } = await commands.executeCommand('vscode.executeCompletionItemProvider', textDocument.uri, textEditor.selection.start) as CompletionList;
 
             assert.ok(items);
 
@@ -156,6 +151,7 @@ suite("Extension Tests", async function () {
         }
     });
 
+    // TODO: Extend full/partial suggest mode with a check for the full mode disabling setting
     xtest('LinkCompletionItemProvider full and partial mode', async () => {
         try {
             await fsExtra.writeFile(readmeMdFilePath, `
@@ -184,12 +180,8 @@ suite("Extension Tests", async function () {
                 const textEditor = await window.showTextDocument(textDocument);
                 await textEditor.edit(editBuilder => editBuilder.insert(textDocument.lineAt(textDocument.lineCount - 1).rangeIncludingLineBreak.end, '\n' + (fullMode ? '[' : '[link](')));
 
-                const items = (await new LinkCompletionItemProvider(true, true).provideCompletionItems(
-                    textDocument,
-                    textDocument.lineAt(textDocument.lineCount - 1).range.end,
-                    token,
-                    { triggerKind: CompletionTriggerKind.Invoke }
-                ))!;
+                // https://code.visualstudio.com/docs/extensionAPI/vscode-api-commands
+                const { items } = await commands.executeCommand('vscode.executeCompletionItemProvider', textDocument.uri, textEditor.selection.start) as CompletionList;
 
                 assert.ok(items);
                 assert.equal(items.length, 16);

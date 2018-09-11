@@ -46,20 +46,22 @@ export default abstract class LinkContextRecognizerBase {
   private audit: ((message: object) => void) | undefined;
   protected constructor(audit?: (message: object) => void) {
     this.audit = audit;
+    this.validate();
   }
 
-  private static capitalize(value: string) {
-    return value[0].toUpperCase() + value.slice(1);
-  }
+  /**
+   * Validate that handlers are in the right order and there are no missing or extra handlers
+   */
+  private validate() {
+    let handlers = Reflect.ownKeys(Reflect.getPrototypeOf(this)).filter(h => typeof h === 'string') as string[];
 
-  protected validate(handlers: string[]) {
-    let error = '\n';
+    // Remove mandatory `constructor` implementation
+    handlers.splice(handlers.indexOf('constructor'), 1);
 
-    const disambiguateIndex = handlers.indexOf('disambiguate');
-    if (disambiguateIndex === -1) {
-      //error += `You must implement the 'disambiguate' handler called at the end of the line. \n`;
-    } else {
-      handlers.splice(disambiguateIndex, 1);
+    // Remove voluntary `finalize` implementation
+    const finalizeHandlerIndex = handlers.indexOf('finalize');
+    if (finalizeHandlerIndex !== -1) {
+      handlers.splice(finalizeHandlerIndex, 1);
     }
 
     const requiredHandlers =
@@ -68,16 +70,17 @@ export default abstract class LinkContextRecognizerBase {
         .reduce((combinations, state) => {
           return [
             ...combinations,
-            `${LinkContextRecognizerBase.NON_TRIGGER}${LinkContextRecognizerBase.capitalize(state)}`,
+            `${LinkContextRecognizerBase.NON_TRIGGER}${state[0].toUpperCase() + state.slice(1)}`,
             ...Object
               .keys(LinkContextRecognizerBase.TRIGGER_CHARACTERS)
-              .map(triggerCharacter => `${triggerCharacter}${LinkContextRecognizerBase.capitalize(state)}`),
+              .map(triggerCharacter => `${triggerCharacter}${state[0].toUpperCase() + state.slice(1)}`),
           ];
         }, [] as string[]);
 
     const missingHandlers = requiredHandlers.filter(h => !handlers.includes(h));
     const extraHandlers = handlers.filter(h => !requiredHandlers.includes(h));
     const unorderedHandlers = handlers.filter(h => requiredHandlers.indexOf(h) !== handlers.indexOf(h));
+    let error = '\n';
 
     if (missingHandlers.length > 0) {
       error += `${missingHandlers.length} handlers are missing:\n\n`;
@@ -122,50 +125,62 @@ export default abstract class LinkContextRecognizerBase {
     }
   }
 
-  protected abstract disambiguate(): void;
-
   protected parse(line: string, index: number) {
+    const handlers = this as any as { [name: string]: () => void | null; };
+
     for (index; index >= 0; index--) {
       const triggerCharacters: { [name: string]: string; } = LinkContextRecognizerBase.TRIGGER_CHARACTERS;
       this.character = line[index];
-      const isTriggerCharacter = LinkContextRecognizerBase.getTriggerCharacters().includes(this.character);
-      const handlers = this as any as { [name: string]: () => void; };
-      if (isTriggerCharacter) {
+      if (LinkContextRecognizerBase.getTriggerCharacters().includes(this.character)) {
         const triggerCharacter = Object.keys(triggerCharacters).find(key => triggerCharacters[key] === this.character);
-        const handler = triggerCharacter + LinkContextRecognizerBase.capitalize(this.state);
+        const handler = triggerCharacter + this.state[0].toUpperCase() + this.state.slice(1);
 
         if (this.audit !== undefined) {
-          this.audit({ line, index, handler, stage: 'enter', ...JSON.parse(JSON.stringify(this)) });
+          const { audit, ...self } = this as any;
+          this.audit({ line, index, handler, stage: 'enter', ...JSON.parse(JSON.stringify(self)) });
         }
 
-        handlers[handler]();
+        const result = handlers[handler]();
 
         if (this.audit !== undefined) {
-          this.audit({ line, index, handler, stage: 'exit', ...JSON.parse(JSON.stringify(this)) });
+          const { audit, ...self } = this as any;
+          this.audit({ line, index, handler, stage: 'exit', ...JSON.parse(JSON.stringify(self)) });
+        }
+
+        if (result === null) {
+          break;
         }
       } else {
-        const handler = LinkContextRecognizerBase.NON_TRIGGER + LinkContextRecognizerBase.capitalize(this.state);
+        const handler = LinkContextRecognizerBase.NON_TRIGGER + this.state[0].toUpperCase() + this.state.slice(1);
 
         if (this.audit !== undefined) {
-          this.audit({ line, index, handler, stage: 'enter', ...JSON.parse(JSON.stringify(this)) });
+          const { audit, ...self } = this as any;
+          this.audit({ line, index, handler, stage: 'enter', ...JSON.parse(JSON.stringify(self)) });
         }
 
-        handlers[handler]();
+        const result = handlers[handler]();
 
         if (this.audit !== undefined) {
-          this.audit({ line, index, handler, stage: 'exit', ...JSON.parse(JSON.stringify(this)) });
+          const { audit, ...self } = this as any;
+          this.audit({ line, index, handler, stage: 'exit', ...JSON.parse(JSON.stringify(self)) });
+        }
+
+        if (result === null) {
+          break;
         }
       }
     }
 
     if (this.audit !== undefined) {
-      this.audit({ line, index, handler: 'disambiguate', stage: 'exit', ...JSON.parse(JSON.stringify(this)) });
+      const { audit, ...self } = this as any;
+      this.audit({ line, index, handler: 'finalize', stage: 'enter', ...JSON.parse(JSON.stringify(self)) });
     }
 
-    this.disambiguate();
+    handlers['finalize']();
 
     if (this.audit !== undefined) {
-      this.audit({ line, index, handler: 'disambiguate', stage: 'exit', ...JSON.parse(JSON.stringify(this)) });
+      const { audit, ...self } = this as any;
+      this.audit({ line, index, handler: 'finalize', stage: 'exit', ...JSON.parse(JSON.stringify(self)) });
     }
   }
 }

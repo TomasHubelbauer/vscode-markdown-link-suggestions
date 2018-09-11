@@ -7,7 +7,7 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
   private pathComponentsReverse: string[] = [];
 
   // Solidified in unambiguous points
-  public context: 'text' | 'transition' | /* TODO: `scheme`? */ 'path' | 'query' | 'fragment' | null = null;
+  public cursor: 'text' | 'transition' | /* TODO: `scheme`? */ 'path' | 'query' | 'fragment' | null = null;
   public text: string | null = null;
   public path: string | null = null;
   public pathComponents: string[] | null = null;
@@ -16,31 +16,19 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
 
   constructor(line: string, index: number, audit?: (message: object) => void) {
     super(audit);
-    const handlers = Reflect.ownKeys(Reflect.getPrototypeOf(this)).filter(h => typeof h === 'string' && h !== 'constructor') as string[];
-    // Validate handlers are in the right other and there are no missing or extra handlers (after this class' instantiation)
-    this.validate(handlers);
-    // Run the parsing now that both the base class and this class have been fully instantiated
+    // Run the parsing now that both this base class and the derived class with handlers have been fully instantiated
     this.parse(line, index);
   }
 
-  protected disambiguate() {
-    // Disambiguate `[text]`
-    if (this.text === null && this.pathCharactersReverse.length > 0) {
-      let text = this.pathCharactersReverse.reverse().join('');
+  protected finalize() {
+    // `)`
+    if (this.cursor === 'path' && this.pathCharactersReverse.length === 0) {
 
-      if (text.startsWith('[')) {
-        text = text.slice(1);
-      }
-
-      if (text.endsWith(']')) {
-        text = text.slice(0, -1);
-      }
-
-      this.text = text;
     }
 
-    if (this.context === null && this.text !== null) {
-
+    // `INVALID ()[`
+    if (this.cursor === null && this.text !== null) {
+      this.text = null;
     }
   }
 
@@ -48,36 +36,36 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
 
   // @ts-ignore
   private nonTriggerUrl() {
+    this.cursor = 'path';
     this.pathCharactersReverse.push(this.character);
   }
 
   // @ts-ignore
   private leftBraceUrl() {
-    if (this.path === null && this.pathCharactersReverse.length > 0) {
-      // Set context and text as we've had `[this` or `[that]`
-      this.context = 'text';
+    if (this.textCharactersReverse.length === 0 && this.pathComponentsReverse.length === 0) {
       this.text = this.pathCharactersReverse.reverse().join('');
-    } else {
-      // Set context as cursor is on `[`
-      this.context = 'path';
+      this.cursor = 'text';
     }
 
-    // Bail if we only have opening brace `[`
-    if (this.pathCharactersReverse.length === 0 && this.pathComponentsReverse.length === 0 && this.textCharactersReverse.length === 0) {
-      this.text = '';
-      return;
-    }
-
-    this.pathCharactersReverse.push(this.character);
+    return null;
   }
 
+  /**
+   * Handle the right square bracket (`]`) in the `url` state.
+   * This means the cursor is placed after the link, e.g.: `[link] |`
+   */
   // @ts-ignore
   private rightBraceUrl() {
-    this.pathCharactersReverse.push(this.character);
+    this.cursor = 'transition';
+    this.state = LinkContextRecognizerBase.STATE_TEXT;
   }
 
   // @ts-ignore
   private leftParenUrl() {
+    if (this.cursor === null) {
+      this.cursor = 'text';
+    }
+
     this.state = LinkContextRecognizerBase.STATE_URL_TRANSITION;
   }
 
@@ -94,7 +82,7 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
 
   // @ts-ignore
   private spaceUrl() {
-    throw new Error();
+    return null;
   }
 
   // @ts-ignore
@@ -113,14 +101,14 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
     this.state = LinkContextRecognizerBase.STATE_URL_PRIOR_HASH;
   }
 
+  /**
+   * Handle the right round bracket (`)`).
+   * This means the cursor is outside of the link, e.g.: `[link](path) |`
+   */
   // @ts-ignore
   private rightParenUrl() {
-    // Ignore closing parenthesis of the MarkDown link
-    if (this.pathCharactersReverse.length === 0 && this.pathComponentsReverse.length === 0) {
-      return;
-    }
-
-    this.pathCharactersReverse.push(this.character);
+    this.cursor = null;
+    return null;
   }
 
   /* URL_TRANSITION */
@@ -153,45 +141,42 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
       this.path = '';
     }
 
-
-
     this.state = LinkContextRecognizerBase.STATE_TEXT;
   }
 
   // @ts-ignore
   private leftParenUrlTransition() {
-    throw new Error();
+    return null;
   }
 
   // @ts-ignore
   private forwardSlashUrlTransition() {
-    throw new Error();
+    return null;
   }
 
   // @ts-ignore
   private backwardSlashUrlTransition() {
-    throw new Error();
+    return null;
   }
 
   // @ts-ignore
   private spaceUrlTransition() {
-    throw new Error();
+    return null;
   }
 
   // @ts-ignore
   private queryUrlTransition() {
-    throw new Error();
+    return null;
   }
 
   // @ts-ignore
   private hashUrlTransition() {
-    throw new Error();
+    return null;
   }
-
 
   // @ts-ignore
   private rightParenUrlTransition() {
-    throw new Error();
+    return null;
   }
 
   /* URL_PRIOR_HASH */
@@ -518,8 +503,8 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
   // @ts-ignore
   private leftBraceText() {
     this.text = this.textCharactersReverse.slice().reverse().join('');
-    // Continue in case this is a red herring and not the final brace
-    this.textCharactersReverse.push(this.character);
+    this.textCharactersReverse = [];
+    return null;
   }
 
   // @ts-ignore
