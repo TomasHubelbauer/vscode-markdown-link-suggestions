@@ -9,3 +9,17 @@ Suggests local files and local MarkDown file headers when typing MarkDown links 
 ## Release Notes
 
 See the [change log](CHANGELOG.md).
+
+## Running
+
+Run `npm run generate` first and then use VS Code F5 for debugging.
+
+## Testing
+
+`npm test`
+
+## Publishing
+
+Update `package.json` and `CHANGELOG.md` first!
+
+`vsce publish`
