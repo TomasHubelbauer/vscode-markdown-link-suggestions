@@ -422,7 +422,7 @@ function anchorize(header: string) {
 }
 
 function resolvePath(textDocument: TextDocument, target: Uri) {
-    const relativePath = target.fsPath;
+    const relativePath = target.fsPath || path.basename(textDocument.fileName); // Fragment-only self-link
     const documentDirectoryPath = path.dirname(textDocument.uri.fsPath);
     const absolutePath = path.resolve(documentDirectoryPath, relativePath);
     return absolutePath;

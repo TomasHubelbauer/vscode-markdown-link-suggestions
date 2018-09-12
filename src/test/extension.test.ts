@@ -293,6 +293,8 @@ suite("Extension Tests", async function () {
 
 https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/5
 
+[](#implicit-bad)
+[](README.md#explicit-bad)
 `);
 
             const textDocument = await workspace.openTextDocument(readmeMdFilePath);
@@ -301,20 +303,31 @@ https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/5
 
             let diagnostics = await drainAsyncIterator(new LinkDiagnosticProvider(true).provideDiagnostics(textDocument));
 
-            assert.equal(diagnostics.length, 2);
+            assert.equal(diagnostics.length, 4);
 
             assert.equal(diagnostics[0].severity, DiagnosticSeverity.Error);
             assert.ok(diagnostics[0].message.startsWith('The header nope doesn\'t exist in file'));
-            assert.ok(diagnostics[0].range.isEqual(new Range(2, 24, 2, 38)));
+            assert.deepEqual(diagnostics[0].range, new Range(2, 24, 2, 38));
 
             assert.equal(diagnostics[1].severity, DiagnosticSeverity.Error);
             assert.ok(diagnostics[1].message.startsWith('The path') && diagnostics[1].message.endsWith('doesn\'t exist on the disk.'));
-            assert.ok(diagnostics[1].range.isEqual(new Range(3, 17, 3, 33)));
+            assert.deepEqual(diagnostics[1].range, new Range(3, 17, 3, 33));
+
+            assert.equal(diagnostics[2].severity, DiagnosticSeverity.Error);
+            assert.ok(diagnostics[2].message.startsWith('The header implicit-bad doesn\'t exist in file'));
+            assert.deepEqual(diagnostics[2].range, new Range(13, 3, 13, 16));
+
+            assert.equal(diagnostics[3].severity, DiagnosticSeverity.Error);
+            assert.ok(diagnostics[3].message.startsWith('The header explicit-bad doesn\'t exist in file'));
+            assert.deepEqual(diagnostics[3].range, new Range(14, 3, 14, 25));
 
             await textEditor.edit(editBuilder => {
                 editBuilder.replace(new Range(2, 34, 2, 38), 'working');
+                editBuilder.replace(new Range(13, 4, 13, 16), 'working');
+                editBuilder.replace(new Range(14, 13, 14, 25), 'working');
                 editBuilder.delete(new Range(3, 17, 3, 24));
             });
+
             await textDocument.save();
 
             diagnostics = await drainAsyncIterator(new LinkDiagnosticProvider(true).provideDiagnostics(textDocument));
