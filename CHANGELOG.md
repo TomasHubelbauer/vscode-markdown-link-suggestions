@@ -1,5 +1,14 @@
 # Change Log
 
+## `11.0.1` (2018-09-12)
+
+- Fix suggestions for headers within the very file (`[](#)`) not narrowing down as the user types because of the missing `filterText` bit
+- Fix header-only links within the very file not being checked against the broken link diagnostics
+
+### Thank You
+
+- [@acristu](https://github.com/acristu): [#11](https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/11)
+
 ## `11.0.0` (2018-08-15)
 
 - Contribute a code action provider for link diagnostics which currently offers and option to create the file if a links file path points to a non-existent file
@@ -14,7 +23,7 @@
 
 ### Thank You
 
-- @borekb: [#8](https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/8)
+- [@borekb](https://github.com/borekb): [#8](https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/8)
 
 ## `9.0.3` (2018-08-11)
 
@@ -36,7 +45,7 @@
 
 ### Thank You
 
-- @borekb: [#5](https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/5)
+- [@borekb](https://github.com/borekb): [#5](https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/5)
 
 ## `8.0.0` (2018-07-24)
 
@@ -44,7 +53,7 @@
 
 ### Thank You
 
-- @dbobak: [#6](https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/6)
+- [@dbobak](https://github.com/dbobak): [#6](https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/6)
 
 ## `7.0.4` (2018-07-23)
 
@@ -53,7 +62,7 @@
 
 ### Thank You
 
-- @borekb: [#4](https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/4)
+- [@borekb](https://github.com/borekb): [#4](https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/4)
 
 ## `7.0.3` (2018-07-19)
 
@@ -61,7 +70,7 @@
 
 ### Thank You
 
-- @borekb: [#1](https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/1)
+- [@borekb](https://github.com/borekb): [#1](https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/1)
 
 ## `7.0.2` (2018-07-19)
 
@@ -73,7 +82,7 @@
 
 ### Thank You
 
-- @insanetesterftw: [#3](https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/3)
+- [@insanetesterftw](https://github.com/insanetesterftw): [#3](https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/3)
 
 ## `7.0.0` (2018-07-19)
 
