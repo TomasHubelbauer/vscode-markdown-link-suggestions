@@ -63,7 +63,7 @@ export default class LinkContextRecognizer extends LinkContextRecognizerBase {
   // @ts-ignore
   private leftParenUrl() {
     if (this.cursor === null) {
-      this.cursor = 'text';
+      this.cursor = 'path';
     }
 
     this.state = LinkContextRecognizerBase.STATE_URL_TRANSITION;

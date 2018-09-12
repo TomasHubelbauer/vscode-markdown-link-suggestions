@@ -41,10 +41,10 @@ suite("Extension Tests", async function () {
                 { line: 'nada [', cursor: 'text', text: '', path: null, pathComponents: null, query: null, fragment: null },
                 { line: 'nada [link', cursor: 'text', text: 'link', path: null, pathComponents: null, query: null, fragment: null },
                 // TODO: Maybe suggest prepending text?
-                { line: 'INVALID (', cursor: 'text', text: null, path: null, pathComponents: null, query: null, fragment: null },
+                { line: 'INVALID (', cursor: 'path', text: null, path: null, pathComponents: null, query: null, fragment: null },
                 // TODO: Maybe suggest prepending text?
                 { line: 'INVALID ()', cursor: null, text: null, path: null, pathComponents: null, query: null, fragment: null },
-                { line: 'INVALID ()[', cursor: null, text: null, path: null, pathComponents: null, query: null, fragment: null },
+                { line: 'INVALID ()[', cursor: 'text', text: '', path: null, pathComponents: null, query: null, fragment: null },
                 { line: 'nada [link](test#a[b]', cursor: 'transition', text: 'b', path: null, pathComponents: null, query: null, fragment: null },
                 { line: 'nada [link]', cursor: 'transition', text: 'link', path: null, pathComponents: null, query: null, fragment: null },
                 { line: 'nada [link](', cursor: 'path', text: 'link', path: '', pathComponents: [], query: null, fragment: null },
