@@ -51,7 +51,73 @@ suite("Extension Tests", async function () {
         }
     });
 
-    test('LinkCompletionItemProvider', async () => {
+    test('LinkCompletionItemProvider headers', async () => {
+        try {
+            await fsExtra.writeFile(readmeMdFilePath, `
+# Test
+
+## Header 1
+
+## Header 2
+
+`);
+
+            const textDocument = await workspace.openTextDocument(readmeMdFilePath);
+            await commands.executeCommand('workbench.action.files.revert', textDocument.uri); // Reload from disk
+            const textEditor = await window.showTextDocument(textDocument);
+            await textEditor.edit(editBuilder => editBuilder.insert(textDocument.lineAt(textDocument.lineCount - 1).rangeIncludingLineBreak.end, '\n' + '[](#'));
+
+            const items = (await new LinkCompletionItemProvider(true, true).provideCompletionItems(
+                textDocument,
+                textDocument.lineAt(textDocument.lineCount - 1).range.end,
+                token,
+                { triggerKind: CompletionTriggerKind.Invoke }
+            ))!;
+
+            assert.ok(items);
+            assert.equal(items.length, 3);
+
+            // Sort items by sort text because by default the order is based on file system enumeration which is not portable
+            items.sort((a, b) => a.sortText!.toString().localeCompare(b.sortText!.toString()));
+
+            // Keep this separate so in case items are added or (re)moved and we don't need to rewrite all indices, we can just reorder code blocks
+            let index = -1;
+
+            //console.log(++index, items[index--]);
+            //console.log(items.map(item => item.insertText));
+
+            assert.equal(items[++index].kind, CompletionItemKind.Reference);
+            assert.equal(items[index].insertText, 'test)');
+            assert.equal(items[index].sortText, 'README.md 00001 # Test');
+            assert.equal(items[index].detail, 'Test');
+            assert.equal(items[index].label, 'Test');
+            assert.equal(items[index].documentation, readmeMdFilePath);
+            assert.ok(items[index].filterText!.includes(readmeMdFilePath));
+
+            assert.equal(items[++index].kind, CompletionItemKind.Reference);
+            assert.equal(items[index].insertText, 'header-1)');
+            assert.equal(items[index].sortText, 'README.md 00002 # Header 1');
+            assert.equal(items[index].detail, 'Header 1');
+            assert.equal(items[index].label, 'Header 1');
+            assert.equal(items[index].documentation, readmeMdFilePath);
+            assert.ok(items[index].filterText!.includes(readmeMdFilePath));
+
+            assert.equal(items[++index].kind, CompletionItemKind.Reference);
+            assert.equal(items[index].insertText, 'header-2)');
+            assert.equal(items[index].sortText, 'README.md 00003 # Header 2');
+            assert.equal(items[index].detail, 'Header 2');
+            assert.equal(items[index].label, 'Header 2');
+            assert.equal(items[index].documentation, readmeMdFilePath);
+            assert.ok(items[index].filterText!.includes(readmeMdFilePath));
+
+            await commands.executeCommand('workbench.action.closeActiveEditor');
+        } finally {
+            await fsExtra.remove(readmeMdFilePath);
+        }
+    });
+
+
+    test('LinkCompletionItemProvider full & partial', async () => {
         try {
             await fsExtra.writeFile(readmeMdFilePath, `
 # Test

@@ -199,6 +199,7 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
                         items.push(this.item(CompletionItemKind.Reference, document.uri.fsPath, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange, true));
                     }
 
+                    items.forEach(item => item.filterText = item.insertText + ';' + item.filterText);
                     return items;
                 } else {
                     // Bail if we are in neither full suggest mode nor partial (link target) suggest mode nor header mode
