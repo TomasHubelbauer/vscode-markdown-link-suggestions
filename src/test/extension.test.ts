@@ -1,6 +1,6 @@
 import * as assert from 'assert';
-import { workspace, CancellationTokenSource, CompletionTriggerKind, window, commands, CompletionItemKind, Range, DiagnosticSeverity } from 'vscode';
-import { LinkDocumentLinkProvider, LinkCompletionItemProvider, LinkDiagnosticProvider, drainAsyncIterator } from '../extension';
+import { workspace, window, commands, CompletionItemKind, Range, DiagnosticSeverity, DocumentLink, CompletionList } from 'vscode';
+import { LinkDiagnosticProvider, drainAsyncIterator } from '../extension';
 import * as path from 'path';
 import * as fsExtra from 'fs-extra';
 
@@ -8,7 +8,6 @@ import * as fsExtra from 'fs-extra';
 suite("Extension Tests", async function () {
     assert.ok(workspace.workspaceFolders);
 
-    const token = new CancellationTokenSource().token;
     const workspaceDirectoryPath = workspace.workspaceFolders![0].uri.fsPath;
     const readmeMdFilePath = path.join(workspaceDirectoryPath, 'README.md');
     const testMdFilePath = path.join(workspaceDirectoryPath, 'test.md');
@@ -16,7 +15,7 @@ suite("Extension Tests", async function () {
     const nestedTestMdRelativeFilePath = path.normalize('nested/test.md');
     const nestedTestMdAbsoluteFilePath = path.join(workspaceDirectoryPath, nestedTestMdRelativeFilePath);
 
-    test('LinkDocumentLinkProvider', async () => {
+    test('MarkDownLinkDocumentLinkProvider', async () => {
         try {
             await fsExtra.writeFile(readmeMdFilePath, `
 [link](README.md)
@@ -34,8 +33,7 @@ suite("Extension Tests", async function () {
             const textDocument = await workspace.openTextDocument(readmeMdFilePath);
             await commands.executeCommand('workbench.action.files.revert', textDocument.uri); // Reload from disk
             await window.showTextDocument(textDocument);
-            const links = new LinkDocumentLinkProvider().provideDocumentLinks(textDocument, token);
-
+            const links = ((await commands.executeCommand('vscode.executeLinkProvider', textDocument.uri)) as DocumentLink[]).filter(link => link.target!.scheme === 'file');
             assert.equal(links.length, 4);
             assert.ok(links[0].range.isEqual(new Range(1, 1, 1, 5)));
             assert.equal(path.normalize(links[0].target!.fsPath).toUpperCase(), path.normalize(readmeMdFilePath).toUpperCase());
@@ -67,12 +65,7 @@ suite("Extension Tests", async function () {
             const textEditor = await window.showTextDocument(textDocument);
             await textEditor.edit(editBuilder => editBuilder.insert(textDocument.lineAt(textDocument.lineCount - 1).rangeIncludingLineBreak.end, '\n' + '[](#'));
 
-            const items = (await new LinkCompletionItemProvider(true, true).provideCompletionItems(
-                textDocument,
-                textDocument.lineAt(textDocument.lineCount - 1).range.end,
-                token,
-                { triggerKind: CompletionTriggerKind.Invoke }
-            ))!;
+            const { items } = await commands.executeCommand('vscode.executeCompletionItemProvider', textDocument.uri, textDocument.lineAt(textDocument.lineCount - 1).range.end) as CompletionList;
 
             assert.ok(items);
             assert.equal(items.length, 3);
@@ -139,24 +132,22 @@ suite("Extension Tests", async function () {
 ## Nested Test Header
 `);
 
+            await workspace.getConfiguration('markdown-link-suggestions').update('allowFullSuggestMode', true);
             for (const fullMode of [true, false]) {
                 const textDocument = await workspace.openTextDocument(readmeMdFilePath);
                 await commands.executeCommand('workbench.action.files.revert', textDocument.uri); // Reload from disk
                 const textEditor = await window.showTextDocument(textDocument);
                 await textEditor.edit(editBuilder => editBuilder.insert(textDocument.lineAt(textDocument.lineCount - 1).rangeIncludingLineBreak.end, '\n' + (fullMode ? '[' : '[link](')));
 
-                const items = (await new LinkCompletionItemProvider(true, true).provideCompletionItems(
-                    textDocument,
-                    textDocument.lineAt(textDocument.lineCount - 1).range.end,
-                    token,
-                    { triggerKind: CompletionTriggerKind.Invoke }
-                ))!;
+                const { items } = await commands.executeCommand('vscode.executeCompletionItemProvider', textDocument.uri, textDocument.lineAt(textDocument.lineCount - 1).range.end) as CompletionList;
 
                 assert.ok(items);
+                console.log(items);
                 assert.equal(items.length, 16);
 
                 // Sort items by sort text because by default the order is based on file system enumeration which is not portable
                 items.sort((a, b) => a.sortText!.toString().localeCompare(b.sortText!.toString()));
+                console.log(items.map(({ detail, insertText }) => ({ detail, insertText })));
 
                 // Keep this separate so in case items are added or (re)moved and we don't need to rewrite all indices, we can just reorder code blocks
                 let index = -1;
@@ -171,6 +162,10 @@ suite("Extension Tests", async function () {
                 assert.equal(items[index].label, 'test (..)');
                 assert.equal(items[index].documentation, workspaceDirectoryPath);
                 assert.ok(items[index].filterText!.includes(workspaceDirectoryPath));
+
+                assert.equal(items[++index].detail, fullMode ? '.vscode](.vscode)' : '.vscode)');
+
+                assert.equal(items[++index].detail, fullMode ? 'settings.json](settings.json)' : 'settings.json)');
 
                 assert.equal(items[++index].insertText, fullMode ? 'extension.test.js](extension.test.js)' : 'extension.test.js)');
 

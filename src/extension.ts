@@ -1,9 +1,11 @@
 'use strict';
 
 import * as fsExtra from 'fs-extra';
-import MarkDownDOM from 'markdown-dom';
 import * as path from 'path';
-import { CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, CompletionItemProvider, Diagnostic, DiagnosticCollection, DiagnosticSeverity, DocumentLink, DocumentLinkProvider, ExtensionContext, FileSystemWatcher, Position, Range, RelativePattern, TextDocument, TextEdit, Uri, languages, workspace, CodeActionProvider, CodeActionContext, CodeAction, Command, CodeActionKind, commands } from 'vscode';
+import { CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, CompletionItemProvider, Diagnostic, DiagnosticCollection, DiagnosticSeverity, ExtensionContext, FileSystemWatcher, Position, Range, RelativePattern, TextDocument, TextEdit, Uri, languages, workspace, CodeActionProvider, CodeActionContext, CodeAction, Command, CodeActionKind, commands, SymbolInformation, SymbolKind } from 'vscode';
+import MarkDownLinkDocumentSymbolProvider from './MarkDownLinkDocumentSymbolProvider';
+import MarkDownLinkDocumentLinkProvider from './MarkDownLinkDocumentLinkProvider';
+import resolvePath from './resolvePath';
 
 // Fix for Node runtime (VS Code is running Node 7 but this will natively work in Node 10)
 if (Symbol["asyncIterator"] === undefined) {
@@ -23,7 +25,8 @@ export function activate(context: ExtensionContext) {
     const linkDiagnosticProvider = new LinkDiagnosticProvider();
     context.subscriptions.push(linkDiagnosticProvider);
 
-    languages.registerDocumentLinkProvider(markDownDocumentSelector, new LinkDocumentLinkProvider());
+    languages.registerDocumentSymbolProvider(markDownDocumentSelector, new MarkDownLinkDocumentSymbolProvider());
+    languages.registerDocumentLinkProvider(markDownDocumentSelector, new MarkDownLinkDocumentLinkProvider());
     languages.registerCodeActionsProvider(markDownDocumentSelector, new LinkCodeActionProvider());
 
     commands.registerCommand('extension.createMissingFile', async (missingFilePath: string, reportingDocumentUri: Uri) => {
@@ -88,10 +91,13 @@ export class LinkDiagnosticProvider {
 
     // TODO: Use MarkDownDOM for finding the links within the document
     public async *provideDiagnostics(textDocument: TextDocument): AsyncIterableIterator<Diagnostic> {
-        for (const link of getFileLinks(textDocument)) {
-            const absolutePath = resolvePath(textDocument, link.uri);
+        const symbols = (await commands.executeCommand('vscode.executeWorkspaceSymbolProvider', '')) as SymbolInformation[];
+        const links = symbols.filter(symbol => symbol.location.uri === textDocument.uri && symbol.containerName === 'MarkDownLink' && symbol.kind === SymbolKind.File);
+        const headers = symbols.filter(symbol => symbol.location.uri === textDocument.uri && symbol.kind === SymbolKind.String); // VS Code API detected headers
+        for (const link of links) {
+            const absolutePath = resolvePath(textDocument, link.name);
             if (!await fsExtra.pathExists(absolutePath)) {
-                const diagnostic = new Diagnostic(link.uriRange, `The path ${absolutePath} doesn't exist on the disk.`, DiagnosticSeverity.Error);
+                const diagnostic = new Diagnostic(link.location.range, `The path ${absolutePath} doesn't exist on the disk.`, DiagnosticSeverity.Error);
                 diagnostic.source = 'MarkDown Link Suggestions';
                 // TODO: Similar enough path exists? Use `code` and suggest rewriting.
                 // TODO: Use `code` and suggest creating.
@@ -99,18 +105,23 @@ export class LinkDiagnosticProvider {
                 yield diagnostic;
             }
 
-            if (link.uri.fragment !== '' && (await fsExtra.stat(absolutePath)).isFile()) {
+            const uri = Uri.parse(link.name);
+            if (uri.scheme && uri.scheme !== 'file') {
+                continue;
+            }
+
+            if (uri.fragment !== '' && (await fsExtra.stat(absolutePath)).isFile()) {
                 let headerExists = false;
-                for (const { text } of getHeaders(await workspace.openTextDocument(absolutePath))) {
+                for (const header of headers) {
                     // Remove periods in fragment because the extension used to not remove them and thus generated fragments which are now invalid
-                    if (anchorize(text) === link.uri.fragment.replace('.', '')) {
+                    if (anchorize(header.name) === uri.fragment.replace('.', '')) {
                         headerExists = true;
                         break;
                     }
                 }
 
                 if (!headerExists) {
-                    const diagnostic = new Diagnostic(link.uriRange, `The header ${link.uri.fragment} doesn't exist in file ${absolutePath}.`, DiagnosticSeverity.Error);
+                    const diagnostic = new Diagnostic(link.location.range, `The header ${uri.fragment} doesn't exist in file ${absolutePath}.`, DiagnosticSeverity.Error);
                     diagnostic.source = 'MarkDown Link Suggestions';
                     // TODO: Similar enough path exists? Use `code` and `relatedInformation` and suggest rewriting.
                     // TODO: Use `code` and suggest appending to the file (maybe quick pick after which header).
@@ -195,8 +206,12 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
                 if (character === '#' && document.getText(headerLinkConfirmationRange) === '](#') {
                     partialSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ')';
                     // Only suggest local file headers
-                    for (const header of getHeaders(document)) {
-                        items.push(this.item(CompletionItemKind.Reference, document.uri.fsPath, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange, true));
+                    const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', document.uri)) as SymbolInformation[];
+                    const headers = symbols.filter(symbol => symbol.kind === SymbolKind.String); // VS Code API detected headers
+                    for (let order = 1; order <= headers.length; order++) {
+                        const header = headers[order - 1];
+                        const text = header.name.replace(/^#+/g, '').trim();
+                        items.push(this.item(CompletionItemKind.Reference, document.uri.fsPath, { order, text }, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange, true));
                     }
 
                     items.forEach(item => item.filterText = item.insertText + ';' + item.filterText);
@@ -229,7 +244,13 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
 
             items.push(this.item(CompletionItemKind.File, file.fsPath, null, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
             if (path.extname(file.fsPath).toUpperCase() === '.MD' && this.allowSuggestionsForHeaders) {
-                for (const { order, text } of getHeaders(await workspace.openTextDocument(file))) {
+                console.log('file', file.toString());
+                const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', file)) as SymbolInformation[];
+                const headers = symbols.filter(symbol => symbol.kind === SymbolKind.String); // VS Code API detected headers
+                console.log('headers', headers);
+                for (let order = 1; order <= headers.length; order++) {
+                    const header = headers[order - 1];
+                    const text = header.name.replace(/^#+/g, '').trim();
                     items.push(this.item(CompletionItemKind.Reference, file.fsPath, { order, text }, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
                 }
             }
@@ -308,124 +329,8 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
     }
 }
 
-export class LinkDocumentLinkProvider implements DocumentLinkProvider {
-    public provideDocumentLinks(document: TextDocument, _token: CancellationToken): DocumentLink[] {
-        return [...getFileLinks(document)].map(({ textRange, uri }) => {
-            return new DocumentLink(textRange, Uri.file(resolvePath(document, uri)));
-        });
-    }
-}
-
-// https://github.com/Microsoft/vscode/issues/50839
-// class LinkFoldingRangeProvider implements FoldingRangeProvider {
-//     provideFoldingRanges(document: TextDocument, context: FoldingContext, token: CancellationToken): FoldingRange[] {
-//         return [...getLinks(document)].map(({ uri, uriRange }) => {
-//             // Fuck! This only allows folding across multiple lines!
-//             // TODO: https://github.com/Microsoft/vscode/issues/50840
-//             return new FoldingRange(textRange, Uri.file(resolvePath(document, uri)));
-//         });
-//     }
-// }
-
-function* getHeaders(textDocument: TextDocument) {
-    let order = 0;
-    for (let index = 0; index < textDocument.lineCount; index++) {
-        const line = textDocument.lineAt(index);
-        if (!line.text.startsWith('#')) {
-            continue;
-        }
-
-        let text = '';
-        try {
-            const dom = MarkDownDOM.parse(line.text);
-            const block = dom.blocks[0];
-            if (block.type !== 'header') {
-                throw new Error('Not a header block!');
-            }
-
-            for (const span of block.spans) {
-                switch (span.type) {
-                    case 'run': text += span.text; break;
-                    case 'link': text += span.text; break;
-                    default: {
-                        // TODO: Telemetry.
-                    }
-                }
-            }
-
-            text = text.trim();
-        } catch (error) {
-            text = line.text.substring(line.text.indexOf('# ') + '# '.length);
-
-            // Remove link.
-            if (text.startsWith('[')) {
-                text = text.substring('['.length, text.indexOf(']'));
-            }
-        }
-
-        order++;
-        yield { order, text };
-    }
-}
-
-function* getFileLinks(textDocument: TextDocument) {
-    let isInCodeBlock = false;
-    for (let index = 0; index < textDocument.lineCount; index++) {
-        const line = textDocument.lineAt(index);
-
-        // TODO: Replace this logic with MarkDownDOM when ready
-        if (line.text.trim().startsWith('```')) {
-            isInCodeBlock = !isInCodeBlock;
-            continue;
-        }
-
-        if (isInCodeBlock) {
-            continue;
-        }
-
-        // TODO: Get rid of these hack by MarkDownDOM when ready
-        const text = line.text
-            // Do not confuse the regex by checkboxes by blanking them out
-            .replace(/\[[ xX]\](.?)/g, '   $1')
-            // Do not consufe the regex by inline code spans by blacking them out
-            .replace(/`[^`]*`/g, match => ' '.repeat(match.length))
-            ;
-
-        const regex = /\[([^\]]*)\]\(([^\)]*)\)/g;
-        let match: RegExpExecArray | null;
-        // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
-        while ((match = regex.exec(text)) !== null) {
-            const text = match[1];
-            const target = match[2];
-            if (text === undefined || target === undefined) {
-                continue;
-            }
-
-            const uri = Uri.parse(target);
-            if (uri.scheme && uri.scheme !== 'file') {
-                continue;
-            }
-
-            const textPosition = new Position(index, match.index + 1 /* [ */);
-            const textRange = new Range(textPosition, textPosition.translate(0, text.length));
-
-            const uriPosition = new Position(index, match.index + 1 /* [ */ + text.length + 2 /* ]( */);
-            const uriRange = new Range(uriPosition, uriPosition.translate(0, target.length));
-
-            yield { text, textRange, uri, uriRange };
-        }
-    }
-}
-
 function anchorize(header: string) {
     return header.toLowerCase().replace(/\s/g, '-').replace(/\./g, '');
-}
-
-function resolvePath(textDocument: TextDocument, target: Uri) {
-    const relativePath = target.fsPath || path.basename(textDocument.fileName); // Fragment-only self-link
-    const documentDirectoryPath = path.dirname(textDocument.uri.fsPath);
-    const absolutePath = path.resolve(documentDirectoryPath, relativePath);
-    return absolutePath;
 }
 
 // https://stackoverflow.com/q/50234481/2715716 when used with `AsyncIterableIterator<Diagnostic>`
