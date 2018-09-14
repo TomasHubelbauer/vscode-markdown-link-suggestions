@@ -1,9 +1,9 @@
-import { DocumentSymbolProvider, TextDocument, CancellationToken, SymbolInformation, SymbolKind, Location, Position, Range } from "vscode";
+import { DocumentSymbolProvider, TextDocument, CancellationToken, SymbolInformation, SymbolKind, Location, Range } from "vscode";
 
 export default class MarkDownLinkDocumentSymbolProvider implements DocumentSymbolProvider {
   public provideDocumentSymbols(document: TextDocument, _token: CancellationToken) {
     let isInCodeBlock = false;
-    const items: SymbolInformation[] = [];
+    const symbols: SymbolInformation[] = [];
     for (let index = 0; index < document.lineCount; index++) {
       const line = document.lineAt(index);
 
@@ -35,16 +35,10 @@ export default class MarkDownLinkDocumentSymbolProvider implements DocumentSymbo
           continue;
         }
 
-        const textPosition = new Position(index, match.index + 1 /* [ */);
-        const textRange = new Range(textPosition, textPosition.translate(0, text.length));
-        items.push(new SymbolInformation(text, SymbolKind.String, '', new Location(document.uri, textRange)));
-
-        const pathPosition = new Position(index, match.index + 1 /* [ */ + text.length + 2 /* ]( */);
-        const pathRange = new Range(pathPosition, pathPosition.translate(0, path.length));
-        items.push(new SymbolInformation(path, SymbolKind.String, '', new Location(document.uri, pathRange)));
+        symbols.push(new SymbolInformation(match[0], SymbolKind.Package, '', new Location(document.uri, new Range(index, match.index, index, match.index + 1 + text.length + 2 + path.length + 1))));
       }
     }
 
-    return items;
+    return symbols;
   }
 }

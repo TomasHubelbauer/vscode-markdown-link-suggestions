@@ -4,8 +4,8 @@
 - [https](https://google.com)
 - [mailto](mailto:tomas@hubelbauer.net)
 - [custom](custom:tomas@hubelbauer.net)
-- [file ok](README.md)
-- [file ko](README.md)
+- [file ok](README.md#-features)
+- [file ko](README2.md)
   - Change this to `README2.d` during demo otherwise F5 will fail due to invalid URL
 - [ ] This [also works](README.md)
 
@@ -19,3 +19,4 @@
 
 - Suggests on `[` and `(`
 - Adjusts header links by replacing spaces with dashes
+

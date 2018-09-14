@@ -277,18 +277,18 @@ suite("Extension Tests", async function () {
             await fsExtra.writeFile(readmeMdFilePath, `
 [exists](README.md)
 [exists but bad header](README.md#nope)
-[does not exist](DO - NOT - README.md)
-[exists - variant without period](README.md#self - vs - self)
-[exists - variant with period](README.md#self - vs.- self)
+[does not exist](DO-NOT-README.md)
+[exists - variant without period](README.md#self-vs-self)
+[exists - variant with period](README.md#self-vs.-self)
 
 ## Working
 
-## Self vs.Self
+## Self vs. Self
 
 https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/5
 
-[](#implicit - bad)
-[](README.md#explicit - bad)
+[](#implicit-bad)
+[](README.md#explicit-bad)
     `);
 
             const textDocument = await workspace.openTextDocument(readmeMdFilePath);
@@ -296,12 +296,11 @@ https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/5
             const textEditor = await window.showTextDocument(textDocument);
 
             let diagnostics = await drainAsyncIterator(new LinkDiagnosticProvider(true).provideDiagnostics(textDocument));
-
             assert.equal(diagnostics.length, 4);
 
             assert.equal(diagnostics[0].severity, DiagnosticSeverity.Error);
             assert.ok(diagnostics[0].message.startsWith('The header nope doesn\'t exist in file'));
-            assert.deepEqual(diagnostics[0].range, new Range(2, 24, 2, 38));
+            assert.deepEqual(diagnostics[0].range, new Range(2, 34, 2, 38));
 
             assert.equal(diagnostics[1].severity, DiagnosticSeverity.Error);
             assert.ok(diagnostics[1].message.startsWith('The path') && diagnostics[1].message.endsWith('doesn\'t exist on the disk.'));
@@ -309,11 +308,11 @@ https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/5
 
             assert.equal(diagnostics[2].severity, DiagnosticSeverity.Error);
             assert.ok(diagnostics[2].message.startsWith('The header implicit-bad doesn\'t exist in file'));
-            assert.deepEqual(diagnostics[2].range, new Range(13, 3, 13, 16));
+            assert.deepEqual(diagnostics[2].range, new Range(13, 4, 13, 16));
 
             assert.equal(diagnostics[3].severity, DiagnosticSeverity.Error);
             assert.ok(diagnostics[3].message.startsWith('The header explicit-bad doesn\'t exist in file'));
-            assert.deepEqual(diagnostics[3].range, new Range(14, 3, 14, 25));
+            assert.deepEqual(diagnostics[3].range, new Range(14, 13, 14, 25));
 
             await textEditor.edit(editBuilder => {
                 editBuilder.replace(new Range(2, 34, 2, 38), 'working');
