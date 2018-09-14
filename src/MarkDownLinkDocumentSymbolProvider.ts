@@ -37,11 +37,11 @@ export default class MarkDownLinkDocumentSymbolProvider implements DocumentSymbo
 
         const textPosition = new Position(index, match.index + 1 /* [ */);
         const textRange = new Range(textPosition, textPosition.translate(0, text.length));
-        items.push(new SymbolInformation(text, SymbolKind.String, 'MarkDownLink', new Location(document.uri, textRange)));
+        items.push(new SymbolInformation(text, SymbolKind.String, '', new Location(document.uri, textRange)));
 
         const pathPosition = new Position(index, match.index + 1 /* [ */ + text.length + 2 /* ]( */);
         const pathRange = new Range(pathPosition, pathPosition.translate(0, path.length));
-        items.push(new SymbolInformation(path, SymbolKind.String, 'MarkDownLink', new Location(document.uri, pathRange)));
+        items.push(new SymbolInformation(path, SymbolKind.String, '', new Location(document.uri, pathRange)));
       }
     }
 

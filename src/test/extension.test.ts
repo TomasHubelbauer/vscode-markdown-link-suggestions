@@ -14,6 +14,7 @@ suite("Extension Tests", async function () {
     const nestedDirectoryPath = path.join(workspaceDirectoryPath, 'nested');
     const nestedTestMdRelativeFilePath = path.normalize('nested/test.md');
     const nestedTestMdAbsoluteFilePath = path.join(workspaceDirectoryPath, nestedTestMdRelativeFilePath);
+    const nestedSettingsJsonRelativeFilePath = path.normalize('.vscode/settings.json');
 
     test('MarkDownLinkDocumentLinkProvider', async () => {
         try {
@@ -142,12 +143,10 @@ suite("Extension Tests", async function () {
                 const { items } = await commands.executeCommand('vscode.executeCompletionItemProvider', textDocument.uri, textDocument.lineAt(textDocument.lineCount - 1).range.end) as CompletionList;
 
                 assert.ok(items);
-                console.log(items);
-                assert.equal(items.length, 16);
+                assert.equal(items.length, 18);
 
                 // Sort items by sort text because by default the order is based on file system enumeration which is not portable
                 items.sort((a, b) => a.sortText!.toString().localeCompare(b.sortText!.toString()));
-                console.log(items.map(({ detail, insertText }) => ({ detail, insertText })));
 
                 // Keep this separate so in case items are added or (re)moved and we don't need to rewrite all indices, we can just reorder code blocks
                 let index = -1;
@@ -163,9 +162,9 @@ suite("Extension Tests", async function () {
                 assert.equal(items[index].documentation, workspaceDirectoryPath);
                 assert.ok(items[index].filterText!.includes(workspaceDirectoryPath));
 
-                assert.equal(items[++index].detail, fullMode ? '.vscode](.vscode)' : '.vscode)');
+                assert.equal(items[++index].insertText, fullMode ? '.vscode](.vscode)' : '.vscode)');
 
-                assert.equal(items[++index].detail, fullMode ? 'settings.json](settings.json)' : 'settings.json)');
+                assert.equal(items[++index].insertText, fullMode ? `settings.json](${nestedSettingsJsonRelativeFilePath})` : `${nestedSettingsJsonRelativeFilePath})`);
 
                 assert.equal(items[++index].insertText, fullMode ? 'extension.test.js](extension.test.js)' : 'extension.test.js)');
 
@@ -278,19 +277,19 @@ suite("Extension Tests", async function () {
             await fsExtra.writeFile(readmeMdFilePath, `
 [exists](README.md)
 [exists but bad header](README.md#nope)
-[does not exist](DO-NOT-README.md)
-[exists - variant without period](README.md#self-vs-self)
-[exists - variant with period](README.md#self-vs.-self)
+[does not exist](DO - NOT - README.md)
+[exists - variant without period](README.md#self - vs - self)
+[exists - variant with period](README.md#self - vs.- self)
 
 ## Working
 
-## Self vs. Self
+## Self vs.Self
 
 https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/5
 
-[](#implicit-bad)
-[](README.md#explicit-bad)
-`);
+[](#implicit - bad)
+[](README.md#explicit - bad)
+    `);
 
             const textDocument = await workspace.openTextDocument(readmeMdFilePath);
             await commands.executeCommand('workbench.action.files.revert', textDocument.uri); // Reload from disk

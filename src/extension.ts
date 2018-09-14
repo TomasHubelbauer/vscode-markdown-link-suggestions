@@ -91,9 +91,29 @@ export class LinkDiagnosticProvider {
 
     // TODO: Use MarkDownDOM for finding the links within the document
     public async *provideDiagnostics(textDocument: TextDocument): AsyncIterableIterator<Diagnostic> {
-        const symbols = (await commands.executeCommand('vscode.executeWorkspaceSymbolProvider', '')) as SymbolInformation[];
-        const links = symbols.filter(symbol => symbol.location.uri === textDocument.uri && symbol.containerName === 'MarkDownLink' && symbol.kind === SymbolKind.File);
-        const headers = symbols.filter(symbol => symbol.location.uri === textDocument.uri && symbol.kind === SymbolKind.String); // VS Code API detected headers
+        const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', textDocument.uri)) as SymbolInformation[];
+        const headers = symbols.filter(symbol => symbol.kind === SymbolKind.String && symbol.name.startsWith('#')); // VS Code API detected headers
+        const links = symbols
+            .filter(symbol => symbol.kind === SymbolKind.String)
+            .map(pathSymbol => {
+                const textSymbol = symbols.find(symbol => symbol.kind === SymbolKind.String && symbol.location.range.end.isEqual(pathSymbol.location.range.start.translate(0, -2)));
+                return { pathSymbol, textSymbol };
+            })
+            .filter(({ pathSymbol, textSymbol }) => {
+                if (pathSymbol === undefined || textSymbol === undefined) {
+                    return false;
+                }
+
+                const uri = Uri.parse(pathSymbol.name);
+                if (uri.scheme && uri.scheme !== 'file') {
+                    return false;
+                }
+
+                return true;
+            })
+            .map(({ pathSymbol }) => pathSymbol);
+        console.log(links);
+
         for (const link of links) {
             const absolutePath = resolvePath(textDocument, link.name);
             if (!await fsExtra.pathExists(absolutePath)) {
@@ -244,10 +264,8 @@ export class LinkCompletionItemProvider implements CompletionItemProvider {
 
             items.push(this.item(CompletionItemKind.File, file.fsPath, null, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
             if (path.extname(file.fsPath).toUpperCase() === '.MD' && this.allowSuggestionsForHeaders) {
-                console.log('file', file.toString());
                 const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', file)) as SymbolInformation[];
                 const headers = symbols.filter(symbol => symbol.kind === SymbolKind.String); // VS Code API detected headers
-                console.log('headers', headers);
                 for (let order = 1; order <= headers.length; order++) {
                     const header = headers[order - 1];
                     const text = header.name.replace(/^#+/g, '').trim();
