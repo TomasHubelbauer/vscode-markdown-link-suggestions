@@ -23,7 +23,7 @@ export async function activate(context: ExtensionContext) {
     context.subscriptions.push(languages.registerDocumentLinkProvider(markDownDocumentSelector, new MarkDownLinkDocumentLinkProvider()));
     context.subscriptions.push(languages.registerCodeActionsProvider(markDownDocumentSelector, new MarkDownLinkCodeActionProvider()));
 
-    const diagnosticCollection = languages.createDiagnosticCollection('MarkDown Links' + (test ? ' Test' : ''));
+    const diagnosticCollection = languages.createDiagnosticCollection('MarkDown Links');
     context.subscriptions.push(diagnosticCollection);
     const watcher = workspace.createFileSystemWatcher('**/*.md');
     context.subscriptions.push(watcher);
@@ -40,7 +40,7 @@ export async function activate(context: ExtensionContext) {
 
     watcher.onDidDelete(uri => diagnosticCollection.delete(uri));
 
-    // TODO: Replace this with command
+    // TODO: Replace this with the VS Code built-in command
     commands.registerCommand('extension.createMissingFile', async (missingFilePath: string, reportingDocumentUri: Uri) => {
         await fsExtra.writeFile(missingFilePath, '');
         // TODO: Unhack
