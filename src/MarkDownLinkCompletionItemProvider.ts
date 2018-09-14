@@ -1,6 +1,7 @@
-import { CompletionItemProvider, TextDocument, Position, CancellationToken, CompletionContext, Range, CompletionItem, commands, SymbolInformation, SymbolKind, CompletionItemKind, workspace, RelativePattern, Uri, TextEdit } from "vscode";
+import { CompletionItemProvider, TextDocument, Position, CancellationToken, CompletionContext, Range, CompletionItem, commands, SymbolInformation, SymbolKind, CompletionItemKind, TextEdit } from "vscode";
 import { dirname, extname, basename, relative, normalize, posix, win32 } from "path";
 import anchorize from "./anchorize";
+import getNonExcludedFiles from "./getNonExcludedFiles";
 
 export default class MarkDownLinkCompletionItemProvider implements CompletionItemProvider {
   public allowFullSuggestMode = false;
@@ -62,20 +63,7 @@ export default class MarkDownLinkCompletionItemProvider implements CompletionIte
       }
     }
 
-    // TODO: https://github.com/TomasHubelbauer/vscode-extension-findFilesWithExcludes
-    // TODO: https://github.com/Microsoft/vscode/issues/48674
-    const excludes = await workspace.getConfiguration('search', null).get('exclude')!;
-    const globs = Object.keys(excludes).map(exclude => new RelativePattern(workspace.workspaceFolders![0], exclude));
-    const occurences: { [fsPath: string]: number; } = {};
-    for (const glob of globs) {
-      // TODO: https://github.com/Microsoft/vscode/issues/47645
-      for (const file of await workspace.findFiles('**/*.*', glob)) {
-        occurences[file.fsPath] = (occurences[file.fsPath] || 0) + 1;
-      }
-    }
-
-    // Accept only files not excluded in any of the globs
-    const files = Object.keys(occurences).filter(fsPath => occurences[fsPath] === globs.length).map(file => Uri.file(file));
+    const files = await getNonExcludedFiles();
     for (const file of files) {
       if (file.scheme !== 'file') {
         return;

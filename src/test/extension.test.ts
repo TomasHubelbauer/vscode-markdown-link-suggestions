@@ -1,8 +1,8 @@
 import * as assert from 'assert';
 import { workspace, window, commands, CompletionItemKind, Range, DiagnosticSeverity, DocumentLink, CompletionList } from 'vscode';
-import { LinkDiagnosticProvider, drainAsyncIterator } from '../extension';
 import * as path from 'path';
 import * as fsExtra from 'fs-extra';
+import provideDiagnostics from '../provideDiagnostics';
 
 // TODO: Extend full/partial suggest mode with a check for the full mode disabling setting
 suite("Extension Tests", async function () {
@@ -272,7 +272,7 @@ suite("Extension Tests", async function () {
         }
     });
 
-    test('LinkDiagnosticProvider', async () => {
+    test('provideDiagnostics', async () => {
         try {
             await fsExtra.writeFile(readmeMdFilePath, `
 [exists](README.md)
@@ -295,7 +295,7 @@ https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/5
             await commands.executeCommand('workbench.action.files.revert', textDocument.uri); // Reload from disk
             const textEditor = await window.showTextDocument(textDocument);
 
-            let diagnostics = await drainAsyncIterator(new LinkDiagnosticProvider(true).provideDiagnostics(textDocument));
+            let diagnostics = await provideDiagnostics(textDocument);
             assert.equal(diagnostics.length, 4);
 
             assert.equal(diagnostics[0].severity, DiagnosticSeverity.Error);
@@ -323,7 +323,7 @@ https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/5
 
             await textDocument.save();
 
-            diagnostics = await drainAsyncIterator(new LinkDiagnosticProvider(true).provideDiagnostics(textDocument));
+            diagnostics = await provideDiagnostics(textDocument);
             assert.equal(diagnostics.length, 0);
         } finally {
             await commands.executeCommand('workbench.action.closeActiveEditor');
