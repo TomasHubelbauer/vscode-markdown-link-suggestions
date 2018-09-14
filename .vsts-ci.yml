@@ -9,6 +9,8 @@ steps:
     checkLatest: true
 - task: Npm@1
   inputs:
+    command: install
+- task: Npm@1
+  inputs:
     command: custom
-    verbose: false
     customCommand: 'run test:posix'
