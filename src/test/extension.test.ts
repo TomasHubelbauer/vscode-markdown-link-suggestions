@@ -82,25 +82,25 @@ suite("Extension Tests", async function () {
 
             assert.equal(items[++index].kind, CompletionItemKind.Reference);
             assert.equal(items[index].insertText, 'test)');
-            assert.equal(items[index].sortText, 'README.md 00001 # Test');
-            assert.equal(items[index].detail, 'Test');
-            assert.equal(items[index].label, 'Test');
+            assert.equal(items[index].sortText, 'README.md:00001');
+            assert.equal(items[index].detail, '# Test');
+            assert.equal(items[index].label, '# Test');
             assert.equal(items[index].documentation, readmeMdFilePath);
             assert.ok(items[index].filterText!.includes(readmeMdFilePath));
 
             assert.equal(items[++index].kind, CompletionItemKind.Reference);
             assert.equal(items[index].insertText, 'header-1)');
-            assert.equal(items[index].sortText, 'README.md 00002 # Header 1');
-            assert.equal(items[index].detail, 'Header 1');
-            assert.equal(items[index].label, 'Header 1');
+            assert.equal(items[index].sortText, 'README.md:00003');
+            assert.equal(items[index].detail, '## Header 1');
+            assert.equal(items[index].label, '## Header 1');
             assert.equal(items[index].documentation, readmeMdFilePath);
             assert.ok(items[index].filterText!.includes(readmeMdFilePath));
 
             assert.equal(items[++index].kind, CompletionItemKind.Reference);
             assert.equal(items[index].insertText, 'header-2)');
-            assert.equal(items[index].sortText, 'README.md 00003 # Header 2');
-            assert.equal(items[index].detail, 'Header 2');
-            assert.equal(items[index].label, 'Header 2');
+            assert.equal(items[index].sortText, 'README.md:00005');
+            assert.equal(items[index].detail, '## Header 2');
+            assert.equal(items[index].label, '## Header 2');
             assert.equal(items[index].documentation, readmeMdFilePath);
             assert.ok(items[index].filterText!.includes(readmeMdFilePath));
 
@@ -192,17 +192,17 @@ suite("Extension Tests", async function () {
 
                 assert.equal(items[++index].kind, CompletionItemKind.Reference);
                 assert.equal(items[index].insertText, fullMode ? `test.md](${nestedTestMdRelativeFilePath}#nested-test)` : `${nestedTestMdRelativeFilePath}#nested-test)`);
-                assert.equal(items[index].sortText, nestedTestMdRelativeFilePath + ' 00001 # Nested Test');
-                assert.equal(items[index].detail, 'Nested Test');
+                assert.equal(items[index].sortText, nestedTestMdRelativeFilePath + ':00001');
+                assert.equal(items[index].detail, '# Nested Test');
                 assert.equal(items[index].label, 'test.md # Nested Test (nested)');
                 assert.equal(items[index].documentation, nestedTestMdAbsoluteFilePath);
                 assert.ok(items[index].filterText!.includes(nestedTestMdAbsoluteFilePath));
 
                 assert.equal(items[++index].kind, CompletionItemKind.Reference);
                 assert.equal(items[index].insertText, fullMode ? `test.md](${nestedTestMdRelativeFilePath}#nested-test-header)` : `${nestedTestMdRelativeFilePath}#nested-test-header)`);
-                assert.equal(items[index].sortText, nestedTestMdRelativeFilePath + ' 00002 # Nested Test Header');
-                assert.equal(items[index].detail, 'Nested Test Header');
-                assert.equal(items[index].label, 'test.md # Nested Test Header (nested)');
+                assert.equal(items[index].sortText, nestedTestMdRelativeFilePath + ':00003');
+                assert.equal(items[index].detail, '## Nested Test Header');
+                assert.equal(items[index].label, 'test.md ## Nested Test Header (nested)');
                 assert.equal(items[index].documentation, nestedTestMdAbsoluteFilePath);
                 assert.ok(items[index].filterText!.includes(nestedTestMdAbsoluteFilePath));
 
@@ -216,25 +216,25 @@ suite("Extension Tests", async function () {
 
                 assert.equal(items[++index].kind, CompletionItemKind.Reference);
                 assert.equal(items[index].insertText, fullMode ? 'README.md](README.md#test)' : 'README.md#test)');
-                assert.equal(items[index].sortText, 'README.md 00001 # Test');
-                assert.equal(items[index].detail, 'Test');
+                assert.equal(items[index].sortText, 'README.md:00001');
+                assert.equal(items[index].detail, '# Test');
                 assert.equal(items[index].label, 'README.md # Test');
                 assert.equal(items[index].documentation, readmeMdFilePath);
                 assert.ok(items[index].filterText!.includes(readmeMdFilePath));
 
                 assert.equal(items[++index].kind, CompletionItemKind.Reference);
                 assert.equal(items[index].insertText, fullMode ? 'README.md](README.md#header-1)' : 'README.md#header-1)');
-                assert.equal(items[index].sortText, 'README.md 00002 # Header 1');
-                assert.equal(items[index].detail, 'Header 1');
-                assert.equal(items[index].label, 'README.md # Header 1');
+                assert.equal(items[index].sortText, 'README.md:00003');
+                assert.equal(items[index].detail, '## Header 1');
+                assert.equal(items[index].label, 'README.md ## Header 1');
                 assert.equal(items[index].documentation, readmeMdFilePath);
                 assert.ok(items[index].filterText!.includes(readmeMdFilePath));
 
                 assert.equal(items[++index].kind, CompletionItemKind.Reference);
                 assert.equal(items[index].insertText, fullMode ? 'README.md](README.md#header-2)' : 'README.md#header-2)');
-                assert.equal(items[index].sortText, 'README.md 00003 # Header 2');
-                assert.equal(items[index].detail, 'Header 2');
-                assert.equal(items[index].label, 'README.md # Header 2');
+                assert.equal(items[index].sortText, 'README.md:00005');
+                assert.equal(items[index].detail, '## Header 2');
+                assert.equal(items[index].label, 'README.md ## Header 2');
                 assert.equal(items[index].documentation, readmeMdFilePath);
                 assert.ok(items[index].filterText!.includes(readmeMdFilePath));
 
@@ -248,17 +248,17 @@ suite("Extension Tests", async function () {
 
                 assert.equal(items[++index].kind, CompletionItemKind.Reference);
                 assert.equal(items[index].insertText, fullMode ? 'test.md](test.md#test)' : 'test.md#test)');
-                assert.equal(items[index].sortText, 'test.md 00001 # Test');
-                assert.equal(items[index].detail, 'Test');
+                assert.equal(items[index].sortText, 'test.md:00001');
+                assert.equal(items[index].detail, '# Test');
                 assert.equal(items[index].label, 'test.md # Test');
                 assert.equal(items[index].documentation, testMdFilePath);
                 assert.ok(items[index].filterText!.includes(testMdFilePath));
 
                 assert.equal(items[++index].kind, CompletionItemKind.Reference);
                 assert.equal(items[index].insertText, fullMode ? 'test.md](test.md#test-header)' : 'test.md#test-header)');
-                assert.equal(items[index].sortText, 'test.md 00002 # Test Header');
-                assert.equal(items[index].detail, 'Test Header');
-                assert.equal(items[index].label, 'test.md # Test Header');
+                assert.equal(items[index].sortText, 'test.md:00003');
+                assert.equal(items[index].detail, '## Test Header');
+                assert.equal(items[index].label, 'test.md ## Test Header');
                 assert.equal(items[index].documentation, testMdFilePath);
                 assert.ok(items[index].filterText!.includes(testMdFilePath));
 

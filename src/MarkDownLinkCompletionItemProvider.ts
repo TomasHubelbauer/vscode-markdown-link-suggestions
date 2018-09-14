@@ -49,10 +49,8 @@ export default class MarkDownLinkCompletionItemProvider implements CompletionIte
           // Only suggest local file headers
           const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', document.uri)) as SymbolInformation[];
           const headers = symbols.filter(symbol => symbol.kind === SymbolKind.String); // VS Code API detected headers
-          for (let order = 1; order <= headers.length; order++) {
-            const header = headers[order - 1];
-            const text = header.name.replace(/^#+/g, '').trim();
-            items.push(this.item(CompletionItemKind.Reference, document.uri.fsPath, { order, text }, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange, true));
+          for (const header of headers) {
+            items.push(this.item(CompletionItemKind.Reference, document.uri.fsPath, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange, true));
           }
 
           items.forEach(item => item.filterText = item.insertText + ';' + item.filterText);
@@ -87,10 +85,8 @@ export default class MarkDownLinkCompletionItemProvider implements CompletionIte
       if (extname(file.fsPath).toUpperCase() === '.MD' && this.allowSuggestionsForHeaders) {
         const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', file)) as SymbolInformation[];
         const headers = symbols.filter(symbol => symbol.kind === SymbolKind.String); // VS Code API detected headers
-        for (let order = 1; order <= headers.length; order++) {
-          const header = headers[order - 1];
-          const text = header.name.replace(/^#+/g, '').trim();
-          items.push(this.item(CompletionItemKind.Reference, file.fsPath, { order, text }, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
+        for (const header of headers) {
+          items.push(this.item(CompletionItemKind.Reference, file.fsPath, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
         }
       }
     }
@@ -111,12 +107,12 @@ export default class MarkDownLinkCompletionItemProvider implements CompletionIte
     return items;
   }
 
-  private item(kind: CompletionItemKind, absoluteFilePath: string, header: { order: number; text: string; } | null, absoluteDocumentDirectoryPath: string, fullSuggestMode: boolean, fullSuggestModeBraceCompleted: boolean, partialSuggestModeBraceCompleted: boolean, braceCompletionRange: Range, hack?: boolean) {
+  private item(kind: CompletionItemKind, absoluteFilePath: string, header: SymbolInformation | null, absoluteDocumentDirectoryPath: string, fullSuggestMode: boolean, fullSuggestModeBraceCompleted: boolean, partialSuggestModeBraceCompleted: boolean, braceCompletionRange: Range, hack?: boolean) {
     // Extract and join the file name with header (if any) for displaying in the label
     const fileName = basename(absoluteFilePath);
     let fileNameWithHeader = fileName;
     if (header !== null) {
-      fileNameWithHeader = hack ? header.text : (fileNameWithHeader + ' # ' + header.text);
+      fileNameWithHeader = hack ? header.name : (fileNameWithHeader + ' ' + header.name);
     }
 
     // Put together a label in a `name#header (directory if not current)` format
@@ -129,11 +125,11 @@ export default class MarkDownLinkCompletionItemProvider implements CompletionIte
     // Construct the completion item based on the label and the provided kind
     const item = new CompletionItem(label, kind);
     // Display standalone header, otherwise fall back to displaying the name we then know doesn't have fragment (header)
-    item.detail = header ? header.text : fileName;
+    item.detail = header ? header.name : fileName;
     // Display expanded and normalized absolute path for inspection
     item.documentation = normalize(absoluteFilePath);
     // Derive anchorized version of the header to ensure working linkage
-    const anchor = header === null ? '' : anchorize(header.text);
+    const anchor = header === null ? '' : anchorize(header.name);
     // Compute suggested file path relative to the currently edited file's directory path
     let relativeFilePath = relative(absoluteDocumentDirectoryPath, absoluteFilePath) || '.';
     // TODO: URL encode path minimally (to make VS Code work, like replacing + sign and other otherwise linkage breaking characters)
@@ -149,12 +145,11 @@ export default class MarkDownLinkCompletionItemProvider implements CompletionIte
       }
     }
 
-    // Sort by the relative path name for now (predictable but not amazingly helpful)
-    // TODO: Contribute a setting for sorting by timestamp then by this
-    item.sortText = relativeFilePath; // TODO
+    // Sort by the relative path name to the document the link being suggested for is in
+    item.sortText = relativeFilePath;
     if (header !== null) {
       // Sort headers in the document order
-      item.sortText += ` ${header.order.toString().padStart(5, '0')} # ${header.text}`;
+      item.sortText += `:${header.location.range.start.line.toString().padStart(5, '0')}`;
     }
 
     // Offer both forwards slash and backwards slash filter paths so that the user can type regardless of the platform

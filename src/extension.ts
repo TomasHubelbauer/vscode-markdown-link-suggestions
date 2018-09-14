@@ -117,7 +117,7 @@ export class LinkDiagnosticProvider {
 
             if (uri.fragment !== '' && (await fsExtra.stat(absolutePath)).isFile()) {
                 // Remove periods in fragment because the extension used to not remove them and thus generated fragments which are now invalid
-                const header = symbols.find(symbol => symbol.kind === SymbolKind.String && anchorize(symbol.name.replace(/^#+/g, '').trim()) === uri.fragment.replace('.', ''));
+                const header = symbols.find(symbol => symbol.kind === SymbolKind.String && anchorize(symbol.name) === anchorize(uri.fragment));
                 if (header === undefined) {
                     const range = new Range(location.range.end.translate(0, 0 - 1 - uri.fragment.length), location.range.end.translate(0, -1));
                     const diagnostic = new Diagnostic(range, `The header ${uri.fragment} doesn't exist in file ${absolutePath}.`, DiagnosticSeverity.Error);
