@@ -57,7 +57,7 @@
         "watch": "tsc -watch -p ./",
         "postinstall": "node ./node_modules/vscode/bin/install",
         "test:win32": "set \"CODE_TESTS_PATH=%cd%/out\" && npm run compile && node ./node_modules/vscode/bin/test",
-        "test:posix": "set \"CODE_TESTS_PATH=$PWD/out\" && npm run compile && node ./node_modules/vscode/bin/test"
+        "test:posix": "CODE_TESTS_PATH=$PWD/out && npm run compile && node ./node_modules/vscode/bin/test"
     },
     "devDependencies": {
         "@types/mocha": "^2.2.42",
