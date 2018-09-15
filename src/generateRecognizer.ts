@@ -3,7 +3,7 @@ import {
   createLiteral, createKeywordTypeNode, createTextChangeRange, createTextSpan, addSyntheticLeadingComment, createBlock, createIdentifier, createSwitch, createCaseBlock,
   createCaseClause, createFor, createParameter, createBinary, createPostfix, createVariableDeclaration, createVariableStatement, createElementAccess,
   createDefaultClause, createBreak, createCall, createStatement, createThis, createNodeArray, createImportClause, createImportDeclaration, createEmptyStatement,
-  createAssignment, createUnionTypeNode, createLiteralTypeNode, createIf, createContinue, createConstructor, createArrayTypeNode, createThrow, createNew,
+  createAssignment, createUnionTypeNode, createLiteralTypeNode, createIf, createContinue, createConstructor, createArrayTypeNode, createThrow, createNew, createDelete,
 } from 'typescript';
 import { writeFileSync } from 'fs';
 import { join } from 'path';
@@ -228,34 +228,19 @@ sourceFile.statements = createNodeArray(
                         ],
                       ),
                     ),
-                    createIf(
-                      createBinary(
-                        createIdentifier('stateTransition'),
-                        SyntaxKind.EqualsEqualsEqualsToken,
-                        createIdentifier('null'),
-                      ),
-                      createBreak(),
-                      undefined,
-                    ),
-                    createIf(
-                      createBinary(
-                        createIdentifier('stateTransition'),
-                        SyntaxKind.EqualsEqualsEqualsToken,
-                        createIdentifier('undefined'),
-                      ),
-                      createContinue(),
-                      undefined,
-                    ),
-                    createStatement(
-                      createAssignment(
-                        createIdentifier('state'),
-                        createIdentifier('stateTransition'),
-                      )
-                    )
+                    createIf(createBinary(createIdentifier('stateTransition'), SyntaxKind.EqualsEqualsEqualsToken, createIdentifier('null')), createBreak()),
+                    createIf(createBinary(createIdentifier('stateTransition'), SyntaxKind.EqualsEqualsEqualsToken, createIdentifier('undefined')), createContinue()),
+                    createStatement(createAssignment(createIdentifier('state'), createIdentifier('stateTransition')))
                   ],
                   true,
                 )
               ),
+              createIf(createBinary(createIdentifier('this.cursor'), SyntaxKind.EqualsEqualsEqualsToken, createIdentifier('undefined')), createStatement(createDelete(createIdentifier('this.cursor')))),
+              createIf(createBinary(createIdentifier('this.text'), SyntaxKind.EqualsEqualsEqualsToken, createIdentifier('undefined')), createStatement(createDelete(createIdentifier('this.text')))),
+              createIf(createBinary(createIdentifier('this.path'), SyntaxKind.EqualsEqualsEqualsToken, createIdentifier('undefined')), createStatement(createDelete(createIdentifier('this.path')))),
+              createIf(createBinary(createIdentifier('this.pathComponents'), SyntaxKind.EqualsEqualsEqualsToken, createIdentifier('undefined')), createStatement(createDelete(createIdentifier('this.pathComponents')))),
+              createIf(createBinary(createIdentifier('this.query'), SyntaxKind.EqualsEqualsEqualsToken, createIdentifier('undefined')), createStatement(createDelete(createIdentifier('this.query')))),
+              createIf(createBinary(createIdentifier('this.fragment'), SyntaxKind.EqualsEqualsEqualsToken, createIdentifier('undefined')), createStatement(createDelete(createIdentifier('this.fragment')))),
             ],
             true,
           )
