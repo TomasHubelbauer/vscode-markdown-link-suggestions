@@ -1,12 +1,19 @@
 # [MarkDown Link Suggestions](https://marketplace.visualstudio.com/items?itemName=TomasHubelbauer.vscode-markdown-link-suggestions)
 
-![Installs](https://vsmarketplacebadge.apphb.com/installs-short/TomasHubelbauer.vscode-markdown-link-suggestions.svg)
+[![](https://vsmarketplacebadge.apphb.com/installs-short/TomasHubelbauer.vscode-markdown-link-suggestions.svg)](https://marketplace.visualstudio.com/items?itemName=TomasHubelbauer.vscode-markdown-link-suggestions)
+
+
 
 Suggests workspace files and MarkDown file headers in MarkDown links.
 
 ![Screenshot](screenshot.gif)
 
 See the [change log](CHANGELOG.md).
+
+## Installing
+
+Either [Click *Install* in the Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=TomasHubelbauer.vscode-markdown-link-suggestions)
+or search for *markdown link suggestions* in VS Code Extensions pane.
 
 ## Running
 
@@ -15,7 +22,7 @@ Use the VS Code *Extension* debug configuration by pressing F5.
 
 ## Testing
 
-- Travis CI: [![Build](https://api.travis-ci.org/TomasHubelbauer/vscode-markdown-link-suggestions.svg?branch=master)](https://travis-ci.org/TomasHubelbauer/vscode-markdown-link-suggestions)
+- Travis CI: [![](https://api.travis-ci.org/TomasHubelbauer/vscode-markdown-link-suggestions.svg?branch=master)](https://travis-ci.org/TomasHubelbauer/vscode-markdown-link-suggestions)
 - Azure CI: [![](https://tomashubelbauer.visualstudio.com/VSCode/_apis/build/status/VSCode-CI)](https://tomashubelbauer.visualstudio.com/VSCode/_build/latest?definitionId=2)
 
 Run tests either using VS Code *Extension Tests* debug configuration or by running a platform appropriate test command:
