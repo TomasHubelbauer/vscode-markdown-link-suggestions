@@ -4,7 +4,7 @@ import MarkDownLinkCompletionItemProvider from './MarkDownLinkCompletionItemProv
 import getNonExcludedFiles from './getNonExcludedFiles';
 import provideDiagnostics from './provideDiagnostics';
 import MarkDownLinkCodeActionProvider from './MarkDownLinkCodeActionProvider';
-import { ExtensionContext, workspace, languages, commands } from 'vscode';
+import { ExtensionContext, workspace, languages, commands, Uri } from 'vscode';
 import { writeFile } from 'fs-extra';
 
 export async function activate(context: ExtensionContext) {

@@ -106,7 +106,7 @@ test('CompletionItemProvider full & partial', async () => {
       const items = list.items.filter(item => !bannedExtensions.includes(extname(item.documentation! as string).toUpperCase()));
 
       ok(items);
-      equal(items.length, 14);
+      equal(items.length, 15);
 
       // Sort items by sort text because by default the order is based on file system enumeration which is not portable
       items.sort((a, b) => a.sortText!.toString().localeCompare(b.sortText!.toString()));
@@ -128,6 +128,8 @@ test('CompletionItemProvider full & partial', async () => {
       equal(items[++index].insertText, fullMode ? '.vscode](.vscode)' : '.vscode)');
 
       equal(items[++index].insertText, fullMode ? `settings.json](${nestedSettingsJsonRelativeFilePath})` : `${nestedSettingsJsonRelativeFilePath})`);
+
+      equal(items[++index].insertText, fullMode ? 'handlers](handlers)' : 'handlers)');
 
       equal(items[++index].kind, CompletionItemKind.Folder);
       equal(items[index].insertText, fullMode ? 'nested](nested)' : 'nested)');

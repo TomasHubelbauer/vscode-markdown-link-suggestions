@@ -13,6 +13,10 @@ steps:
 - task: Npm@1
   inputs:
     command: custom
+    customCommand: 'run generate'
+- task: Npm@1
+  inputs:
+    command: custom
     customCommand: 'run test:posix'
 - task: PublishTestResults@2
   inputs:

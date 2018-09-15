@@ -1,5 +1,5 @@
 import { CompletionItemProvider, TextDocument, Position, CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, commands, SymbolInformation, SymbolKind } from "vscode";
-import LinkContextRecognizer from "./LinkContextRecognizer";
+import LinkContextRecognizer from "./LinkContextRecognizer.g";
 import { dirname, extname, basename, relative, normalize, win32, posix } from "path";
 import anchorize from "./anchorize";
 import getNonExcludedFiles from "./getNonExcludedFiles";
