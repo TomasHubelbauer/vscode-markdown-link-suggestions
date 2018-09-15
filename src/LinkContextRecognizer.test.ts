@@ -3,12 +3,10 @@ import { deepEqual } from "assert";
 
 // TODO: Introduce combinatorically generated tests
 test('LinkContextRecognizer', async () => {
-  deepEqual(new LinkContextRecognizer('not link [link](path'), { cursor: 'path', text: 'link', path: 'path', pathComponents: ['path'] });
-  // TODO:
-  // deepEqual(new LinkContextRecognizer('not link [link](path)'), {});
-  // deepEqual(new LinkContextRecognizer('hello ['), { cursor: 'text', text: '' });
-  // deepEqual(new LinkContextRecognizer('nada ['), { cursor: 'text', text: '' });
-  // deepEqual(new LinkContextRecognizer('nada [link'), { cursor: 'text', text: 'link' });
+  deepEqual(new LinkContextRecognizer('_ [text](path'), { cursor: 'path', text: 'text', path: 'path', pathComponents: ['path'] });
+  deepEqual(new LinkContextRecognizer('_ [text](path)'), {});
+  deepEqual(new LinkContextRecognizer('_ ['), { cursor: 'text', text: '' });
+  deepEqual(new LinkContextRecognizer('_ [text'), { cursor: 'text', text: 'text' });
   // deepEqual(new LinkContextRecognizer('INVALID ('), { cursor: 'path' });
   // deepEqual(new LinkContextRecognizer('INVALID ()'), {});
   // deepEqual(new LinkContextRecognizer('INVALID ()['), { cursor: 'text', text: '' });

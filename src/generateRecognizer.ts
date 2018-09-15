@@ -268,9 +268,14 @@ for (const combination of combine()) {
   }
 
   writeFileSync(join('src', 'handlers', combination.handler + '.g.ts'), `
-// This is a generated file, to make it yours, remove it from the .gitignore of this repository
+// This is a generated file, to make it yours, change the extension from .g.ts to .ts (VS Code will rename the imports)
 import LinkContextRecognizer from '../LinkContextRecognizer.g';
-export default function({}: LinkContextRecognizer${combination.trigger ? '' : ', _character: string'}): undefined | ${states.map(state => `'${state}'`).join(' | ')} | null {
+import State from './state';
+
+const state = new State();
+
+export default function(self: LinkContextRecognizer${combination.trigger ? '' : ', _character: string'}): undefined | ${states.map(state => `'${state}'`).join(' | ')} | null {
+  const data = state.for(self);
   throw new Error("The handler '${combination.handler}' has not been implemented.");
 }
 `, 'utf8');
