@@ -4,7 +4,7 @@ import { pathExists, stat } from "fs-extra";
 import anchorize from "./anchorize";
 
 export default async function provideDiagnostics(document: TextDocument) {
-  const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', document.uri)) as SymbolInformation[];
+  const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', document.uri)) as SymbolInformation[] || [];
   const diagnostics: Diagnostic[] = [];
   for (const { kind, name, location } of symbols) {
     if (kind !== SymbolKind.Package || !name.startsWith('[') || !name.endsWith(')')) {
