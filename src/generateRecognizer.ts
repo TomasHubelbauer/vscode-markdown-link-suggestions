@@ -5,9 +5,9 @@ import {
   createDefaultClause, createBreak, createCall, createStatement, createThis, createNodeArray, createImportClause, createImportDeclaration, createEmptyStatement,
   createAssignment, createUnionTypeNode, createLiteralTypeNode, createIf, createContinue, createConstructor, createArrayTypeNode, createThrow, createNew,
 } from 'typescript';
-import { writeFileSync, readFileSync } from 'fs';
+import { writeFileSync } from 'fs';
 import { join } from 'path';
-import { pathExistsSync } from 'fs-extra';
+import { pathExistsSync, ensureDirSync } from 'fs-extra';
 
 const states = ['path', 'pathTransition', 'pathPriorHash', 'pathPriorQuery', 'pathPriorQueryTransition', 'pathPriorSlash', 'pathPriorSlashTransition', 'text'];
 const nonTriggerCharacter = 'nonTriggerCharacter';
@@ -28,7 +28,7 @@ sourceFile.statements = createNodeArray(
   [
     createEmptyStatement(),
     ...combine()
-      .map(combination => createImportDeclaration(undefined, undefined, createImportClause(createIdentifier(combination.handler), undefined), createLiteral(`./handlers/${combination.handler}`))),
+      .map(combination => createImportDeclaration(undefined, undefined, createImportClause(createIdentifier(combination.handler), undefined), createLiteral(`./handlers/${combination.handler}${combination.exists ? '' : '.g'}`))),
     createClassDeclaration(
       undefined,
       [
@@ -275,22 +275,14 @@ const sourceCode = createPrinter().printNode(EmitHint.Unspecified, sourceFile, s
 sourceFile = sourceFile.update(sourceCode, createTextChangeRange(createTextSpan(sourceFile.getStart(), sourceFile.getEnd()), sourceCode.length));
 
 writeFileSync(join('src', sourceFile.fileName), sourceFile.getFullText(), 'utf8');
+ensureDirSync(join('src', 'handlers'));
+for (const combination of combine()) {
+  // Skip .g.ts where there is .ts
+  if (combination.exists) {
+    continue;
+  }
 
-const gitIgnoreFilePath = join('src', 'handlers', '.gitignore');
-if (!pathExistsSync(gitIgnoreFilePath)) {
-  writeFileSync(gitIgnoreFilePath, `
-# The generator reads this file and will only generate files that are on this list
-# Once you implement a handler, comment it out so that the generator leaves it intact
-${combine().map(combination => combination.handler + '.ts').join('\n')}
-`, 'utf8');
-}
-
-const ignoredPatterns = String(readFileSync(gitIgnoreFilePath, 'utf8')).split('\n');
-const ignoredCombinations = combine().filter(combination => ignoredPatterns.includes(combination.handler + '.ts'));
-
-// Skip the non-ignored combinations, those have been changed and we don't wont to lose non-generated code
-for (const combination of ignoredCombinations) {
-  writeFileSync(join('src', 'handlers', combination.handler + '.ts'), `
+  writeFileSync(join('src', 'handlers', combination.handler + '.g.ts'), `
 // This is a generated file, to make it yours, remove it from the .gitignore of this repository
 import LinkContextRecognizer from '../LinkContextRecognizer.g';
 export default function({}: LinkContextRecognizer${combination.trigger ? '' : ', character: string'}): undefined | ${states.map(state => `'${state}'`).join(' | ')} | null {
@@ -301,8 +293,19 @@ export default function({}: LinkContextRecognizer${combination.trigger ? '' : ',
 
 function combine() {
   return triggerCharacters
-    .reduce((combinations, triggerCharacter) => [...combinations, ...states.map(state => ({ handler: `${triggerCharacter.name}${capitalize(state)}`, trigger: true }))], [] as { handler: string; trigger: boolean; }[])
-    .concat(states.map(state => ({ handler: `${nonTriggerCharacter}${capitalize(state)}`, trigger: false })));
+    .reduce((combinations, triggerCharacter) => [
+      ...combinations,
+      ...states.map(state => {
+        const handler = `${triggerCharacter.name}${capitalize(state)}`;
+        const exists = pathExistsSync(join('src', 'handlers', handler + '.ts'));
+        return { handler, trigger: true, exists };
+      })
+    ], [] as { handler: string; trigger: boolean; exists: boolean; }[])
+    .concat(states.map(state => {
+      const handler = `${nonTriggerCharacter}${capitalize(state)}`;
+      const exists = pathExistsSync(join('src', 'handlers', handler + '.ts'));
+      return { handler, trigger: false, exists };
+    }));
 }
 
 function capitalize(state: string) {
