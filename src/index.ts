@@ -1,7 +1,7 @@
 import * as testRunner from 'vscode/lib/testrunner';
 
 // https://github.com/mochajs/mocha/wiki/Using-mocha-programmatically#set-options
-if (process.env.CI) {
+if (process.env.TF_BUILD) {
     testRunner.configure({
         ui: 'tdd',
         useColors: true,
