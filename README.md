@@ -2,7 +2,7 @@
 
 ![Installs](https://vsmarketplacebadge.apphb.com/installs-short/TomasHubelbauer.vscode-markdown-link-suggestions.svg)
 
-Suggests local files and local MarkDown file headers when typing MarkDown links URLs.
+Suggests workspace files and MarkDown file headers in MarkDown links.
 
 ![Screenshot](screenshot.gif)
 
