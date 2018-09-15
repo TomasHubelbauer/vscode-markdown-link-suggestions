@@ -8,7 +8,7 @@ if (process.env.CI) {
         timeout: 15000,
         reporter: 'mocha-junit-reporter',
         reporterOptions: {
-            mochaFile: '../../junit.xml',
+            mochaFile: process.env['Build.SourcesDirectory'] + '/junit.xml', // In local: ../../junit.xml
         }
     } as any);
 } else {
