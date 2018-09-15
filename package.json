@@ -56,7 +56,7 @@
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "postinstall": "node ./node_modules/vscode/bin/install",
-        "generate": "ts-node src/LinkContextRecognizerGenerator.ts",
+        "generate": "ts-node src/genrateRecognizer.ts",
         "test:win32": "set \"CODE_TESTS_PATH=%cd%/out\" && npm run compile && node ./node_modules/vscode/bin/test",
         "test:posix": "npm run compile && CODE_TESTS_PATH=${PWD}/out node ./node_modules/vscode/bin/test"
     },
@@ -64,6 +64,7 @@
         "@types/mocha": "^2.2.42",
         "@types/node": "^7.0.43",
         "mocha-junit-reporter": "^1.18.0",
+        "ts-node": "^7.0.1",
         "tslint": "^5.8.0",
         "typescript": "^2.6.1",
         "vscode": "^1.1.6"

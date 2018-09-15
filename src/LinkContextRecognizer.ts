@@ -1,6 +1,4 @@
-import LinkContextRecognizerBase from "./LinkContextRecognizerGenerator";
-
-export default class LinkContextRecognizer extends LinkContextRecognizerBase {
+export default class LinkContextRecognizer {
   private character: string;
 
   // Updated in each step
