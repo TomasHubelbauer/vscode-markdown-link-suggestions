@@ -14,7 +14,10 @@ steps:
   inputs:
     command: custom
     customCommand: 'run test:posix'
+- script: |
+    echo %cd%
+    dir
 - task: PublishTestResults@2
   inputs:
     testResultsFormat: JUnit
-    testResultsFiles: '**/junit.xml'
+    testResultsFiles: '**/*.xml'
