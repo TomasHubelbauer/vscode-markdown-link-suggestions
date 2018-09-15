@@ -1,25 +1,16 @@
 import {
-  createClassDeclaration, createToken, SyntaxKind, createPrinter, EmitHint, createSourceFile, ScriptTarget, ScriptKind, createProperty, createArrayLiteral, createLiteral,
-  createKeywordTypeNode, createTextChangeRange, createTextSpan, addSyntheticLeadingComment, createBlock,
-  createIdentifier, createSwitch, createCaseBlock, createCaseClause, createFor, createParameter, createBinary, createPostfix, createPropertyAccess, createVariableDeclaration,
-  createVariableStatement, createElementAccess, createDefaultClause, createBreak, createCall, createStatement, createThis, createNodeArray, createImportClause,
-  createImportDeclaration,
-  createEmptyStatement,
-  createAssignment,
-  createUnionTypeNode,
-  createLiteralTypeNode,
-  createIf,
-  createContinue,
-  createConstructor,
-  createArrayTypeNode,
-
+  createClassDeclaration, createToken, SyntaxKind, createPrinter, EmitHint, createSourceFile, ScriptTarget, ScriptKind, createProperty, createArrayLiteral,
+  createLiteral, createKeywordTypeNode, createTextChangeRange, createTextSpan, addSyntheticLeadingComment, createBlock, createIdentifier, createSwitch, createCaseBlock,
+  createCaseClause, createFor, createParameter, createBinary, createPostfix, createVariableDeclaration, createVariableStatement, createElementAccess,
+  createDefaultClause, createBreak, createCall, createStatement, createThis, createNodeArray, createImportClause, createImportDeclaration, createEmptyStatement,
+  createAssignment, createUnionTypeNode, createLiteralTypeNode, createIf, createContinue, createConstructor, createArrayTypeNode, createThrow, createNew,
 } from 'typescript';
 import { writeFileSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { pathExistsSync } from 'fs-extra';
 
 const states = ['path', 'pathTransition', 'pathPriorHash', 'pathPriorQuery', 'pathPriorQueryTransition', 'pathPriorSlash', 'pathPriorSlashTransition', 'text'];
-//const nonTriggerCharacter = 'nonTriggerCharacter';
+const nonTriggerCharacter = 'nonTriggerCharacter';
 const triggerCharacters = [
   { value: '[', name: 'openingSquareBracket' },
   { value: ']', name: 'closingSquareBracket' },
@@ -37,16 +28,7 @@ sourceFile.statements = createNodeArray(
   [
     createEmptyStatement(),
     ...combine()
-      .map(combination => createImportDeclaration(
-        undefined,
-        undefined,
-        createImportClause(
-          createIdentifier(combination),
-          undefined
-        ),
-        createLiteral(`./handlers/${combination}`),
-      )
-      ),
+      .map(combination => createImportDeclaration(undefined, undefined, createImportClause(createIdentifier(combination.handler), undefined), createLiteral(`./handlers/${combination.handler}`))),
     createClassDeclaration(
       undefined,
       [
@@ -84,10 +66,10 @@ sourceFile.statements = createNodeArray(
               createLiteralTypeNode(createLiteral('path')),
               createLiteralTypeNode(createLiteral('query')),
               createLiteralTypeNode(createLiteral('fragment')),
-              createKeywordTypeNode(SyntaxKind.NullKeyword)
+              createKeywordTypeNode(SyntaxKind.UndefinedKeyword)
             ]
           ),
-          createIdentifier('null'),
+          createIdentifier('undefined'),
         ),
         createProperty(
           undefined,
@@ -96,8 +78,8 @@ sourceFile.statements = createNodeArray(
           ],
           'text',
           undefined,
-          createUnionTypeNode([createKeywordTypeNode(SyntaxKind.StringKeyword), createKeywordTypeNode(SyntaxKind.NullKeyword)]),
-          createIdentifier('null'),
+          createUnionTypeNode([createKeywordTypeNode(SyntaxKind.StringKeyword), createKeywordTypeNode(SyntaxKind.UndefinedKeyword)]),
+          createIdentifier('undefined'),
         ),
         createProperty(
           undefined,
@@ -106,8 +88,8 @@ sourceFile.statements = createNodeArray(
           ],
           'path',
           undefined,
-          createUnionTypeNode([createKeywordTypeNode(SyntaxKind.StringKeyword), createKeywordTypeNode(SyntaxKind.NullKeyword)]),
-          createIdentifier('null'),
+          createUnionTypeNode([createKeywordTypeNode(SyntaxKind.StringKeyword), createKeywordTypeNode(SyntaxKind.UndefinedKeyword)]),
+          createIdentifier('undefined'),
         ),
         createProperty(
           undefined,
@@ -116,8 +98,8 @@ sourceFile.statements = createNodeArray(
           ],
           'pathComponents',
           undefined,
-          createUnionTypeNode([createArrayTypeNode(createKeywordTypeNode(SyntaxKind.StringKeyword)), createKeywordTypeNode(SyntaxKind.NullKeyword)]),
-          createIdentifier('null'),
+          createUnionTypeNode([createArrayTypeNode(createKeywordTypeNode(SyntaxKind.StringKeyword)), createKeywordTypeNode(SyntaxKind.UndefinedKeyword)]),
+          createIdentifier('undefined'),
         ),
         createProperty(
           undefined,
@@ -126,8 +108,8 @@ sourceFile.statements = createNodeArray(
           ],
           'query',
           undefined,
-          createUnionTypeNode([createKeywordTypeNode(SyntaxKind.StringKeyword), createKeywordTypeNode(SyntaxKind.NullKeyword)]),
-          createIdentifier('null'),
+          createUnionTypeNode([createKeywordTypeNode(SyntaxKind.StringKeyword), createKeywordTypeNode(SyntaxKind.UndefinedKeyword)]),
+          createIdentifier('undefined'),
         ),
         createProperty(
           undefined,
@@ -136,37 +118,21 @@ sourceFile.statements = createNodeArray(
           ],
           'fragment',
           undefined,
-          createUnionTypeNode([createKeywordTypeNode(SyntaxKind.StringKeyword), createKeywordTypeNode(SyntaxKind.NullKeyword)]),
-          createIdentifier('null'),
+          createUnionTypeNode([createKeywordTypeNode(SyntaxKind.StringKeyword), createKeywordTypeNode(SyntaxKind.UndefinedKeyword)]),
+          createIdentifier('undefined'),
         ),
         createConstructor(
           undefined,
           undefined,
           [
-            createParameter(
-              undefined,
-              undefined,
-              undefined,
-              'line',
-              undefined,
-              createKeywordTypeNode(SyntaxKind.StringKeyword),
-            ),
-            createParameter(
-              undefined,
-              undefined,
-              undefined,
-              'index',
-              undefined,
-              createKeywordTypeNode(SyntaxKind.NumberKeyword),
-            ),
+            createParameter(undefined, undefined, undefined, 'line', undefined, createKeywordTypeNode(SyntaxKind.StringKeyword)),
+            createParameter(undefined, undefined, undefined, 'index', createToken(SyntaxKind.QuestionToken), createKeywordTypeNode(SyntaxKind.NumberKeyword)),
           ],
           createBlock(
             [
+              createStatement(createAssignment(createIdentifier('index'), createBinary(createIdentifier('index'), SyntaxKind.BarBarToken, createIdentifier('line.length - 1')))),
               createVariableStatement(
-                [
-                  // TODO: Figure out how to get rid of `var`
-                  // createToken(SyntaxKind.ConstKeyword),
-                ],
+                undefined,
                 [
                   createVariableDeclaration(
                     'state',
@@ -177,32 +143,19 @@ sourceFile.statements = createNodeArray(
               ),
               createFor(
                 createIdentifier('index'),
-                createBinary(
-                  createIdentifier('index'),
-                  SyntaxKind.GreaterThanEqualsToken,
-                  createPropertyAccess(
-                    createIdentifier('line'),
-                    'length',
-                  )
-                ),
-                createPostfix(
-                  createIdentifier('index'),
-                  SyntaxKind.MinusMinusToken,
-                ),
+                createBinary(createIdentifier('index'), SyntaxKind.GreaterThanEqualsToken, createLiteral(0)),
+                createPostfix(createIdentifier('index'), SyntaxKind.MinusMinusToken),
                 createBlock(
                   [
                     createVariableStatement(
-                      [
-                        // TODO: Figure out how to get rid of `var`
-                        // createToken(SyntaxKind.ConstKeyword),
-                      ],
+                      undefined,
                       [
                         createVariableDeclaration(
                           'character',
                           undefined,
                           createElementAccess(
                             createIdentifier('line'),
-                            0,
+                            createIdentifier('index'),
                           ),
                         ),
                         createVariableDeclaration(
@@ -225,56 +178,50 @@ sourceFile.statements = createNodeArray(
                           ...triggerCharacters.map(triggerCharacter => createCaseClause(
                             createLiteral(triggerCharacter.value),
                             [
-                              createBlock(
-                                [
-                                  createSwitch(
-                                    createIdentifier('state'),
-                                    createCaseBlock(
+                              createSwitch(
+                                createIdentifier('state'),
+                                createCaseBlock(
+                                  [
+                                    ...states.map(state => createCaseClause(
+                                      createLiteral(state),
                                       [
-                                        ...states.map(state => createCaseClause(
-                                          createLiteral(state),
-                                          [
-                                            createStatement(
-                                              createAssignment(
-                                                createIdentifier('stateTransition'),
-                                                createCall(
-                                                  createIdentifier(`${triggerCharacter.name}${capitalize(state)}`),
-                                                  undefined,
-                                                  [
-                                                    createThis(),
-                                                  ],
-                                                ),
-                                              )
-                                            ),
-                                            createBreak(),
-                                          ]
-                                        )),
-                                        createDefaultClause(
-                                          [
-                                            createBlock(
-                                              [
-
-                                              ],
-                                              true,
-                                            )
-                                          ]
-                                        )
+                                        createStatement(
+                                          createAssignment(
+                                            createIdentifier('stateTransition'),
+                                            createCall(createIdentifier(`${triggerCharacter.name}${capitalize(state)}`), undefined, [createThis()]),
+                                          )
+                                        ),
+                                        createBreak(),
                                       ]
-                                    ),
-                                  ),
-                                  createBreak(),
-                                ],
-                                true,
-                              )
+                                    )),
+                                    createDefaultClause([createThrow(createNew(createIdentifier('Error'), undefined, [createLiteral('Unknown state.')]))])
+                                  ]
+                                ),
+                              ),
+                              createBreak(),
                             ],
                           )),
                           createDefaultClause(
                             [
-                              createBlock(
-                                [
-
-                                ],
-                                true,
+                              createSwitch(
+                                createIdentifier('state'),
+                                createCaseBlock(
+                                  [
+                                    ...states.map(state => createCaseClause(
+                                      createLiteral(state),
+                                      [
+                                        createStatement(
+                                          createAssignment(
+                                            createIdentifier('stateTransition'),
+                                            createCall(createIdentifier(`${nonTriggerCharacter}${capitalize(state)}`), undefined, [createThis(), createIdentifier('character')]),
+                                          )
+                                        ),
+                                        createBreak(),
+                                      ]
+                                    )),
+                                    createDefaultClause([createThrow(createNew(createIdentifier('Error'), undefined, [createLiteral('Unknown state.')]))])
+                                  ]
+                                )
                               )
                             ],
                           )
@@ -334,26 +281,28 @@ if (!pathExistsSync(gitIgnoreFilePath)) {
   writeFileSync(gitIgnoreFilePath, `
 # The generator reads this file and will only generate files that are on this list
 # Once you implement a handler, comment it out so that the generator leaves it intact
-${combine().map(combination => combination + '.ts').join('\n')}
+${combine().map(combination => combination.handler + '.ts').join('\n')}
 `, 'utf8');
 }
 
 const ignoredPatterns = String(readFileSync(gitIgnoreFilePath, 'utf8')).split('\n');
-const ignoredCombinations = combine().filter(combination => ignoredPatterns.includes(combination + '.ts'));
+const ignoredCombinations = combine().filter(combination => ignoredPatterns.includes(combination.handler + '.ts'));
 
 // Skip the non-ignored combinations, those have been changed and we don't wont to lose non-generated code
 for (const combination of ignoredCombinations) {
-  writeFileSync(join('src', 'handlers', combination + '.ts'), `
+  writeFileSync(join('src', 'handlers', combination.handler + '.ts'), `
 // This is a generated file, to make it yours, remove it from the .gitignore of this repository
 import LinkContextRecognizer from '../LinkContextRecognizer.g';
-export default function({}: LinkContextRecognizer): undefined | ${states.map(state => `'${state}'`).join(' | ')} | null {
-  throw new Error("The handler '${combination}' has not been implemented.");
+export default function({}: LinkContextRecognizer${combination.trigger ? '' : ', character: string'}): undefined | ${states.map(state => `'${state}'`).join(' | ')} | null {
+  throw new Error("The handler '${combination.handler}' has not been implemented.");
 }
 `, 'utf8');
 }
 
 function combine() {
-  return triggerCharacters.reduce((combinations, triggerCharacter) => [...combinations, ...states.map(state => `${triggerCharacter.name}${capitalize(state)}`)], [] as string[])
+  return triggerCharacters
+    .reduce((combinations, triggerCharacter) => [...combinations, ...states.map(state => ({ handler: `${triggerCharacter.name}${capitalize(state)}`, trigger: true }))], [] as { handler: string; trigger: boolean; }[])
+    .concat(states.map(state => ({ handler: `${nonTriggerCharacter}${capitalize(state)}`, trigger: false })));
 }
 
 function capitalize(state: string) {
