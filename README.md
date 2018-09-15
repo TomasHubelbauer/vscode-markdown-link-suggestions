@@ -22,8 +22,11 @@ Use the VS Code *Extension* debug configuration by pressing F5.
 
 ## Testing
 
-- Travis CI: [![](https://api.travis-ci.org/TomasHubelbauer/vscode-markdown-link-suggestions.svg?branch=master)](https://travis-ci.org/TomasHubelbauer/vscode-markdown-link-suggestions)
-- Azure CI: [![](https://tomashubelbauer.visualstudio.com/VSCode/_apis/build/status/VSCode-CI)](https://tomashubelbauer.visualstudio.com/VSCode/_build/latest?definitionId=2)
+- Travis CI Linux & macOS: [![](https://api.travis-ci.org/TomasHubelbauer/vscode-markdown-link-suggestions.svg?branch=master)](https://travis-ci.org/TomasHubelbauer/vscode-markdown-link-suggestions)
+- Azure CI:
+  - Windows: [![](https://tomashubelbauer.visualstudio.com/VSCode/_apis/build/status/MarkDown%20Link%20Suggestions%20Windows)](https://tomashubelbauer.visualstudio.com/VSCode/_build/latest?definitionId=4)
+  - Linux: [![](https://tomashubelbauer.visualstudio.com/VSCode/_apis/build/status/MarkDown%20Link%20Suggestions%20Linux)](https://tomashubelbauer.visualstudio.com/VSCode/_build/latest?definitionId=3)
+  - macOS: [![](https://tomashubelbauer.visualstudio.com/VSCode/_apis/build/status/MarkDown%20Link%20Suggestions%20macOS)](https://tomashubelbauer.visualstudio.com/VSCode/_build/latest?definitionId=2)
 
 Run tests either using VS Code *Extension Tests* debug configuration or by running a platform appropriate test command:
 
