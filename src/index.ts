@@ -5,6 +5,11 @@ testRunner.configure({
     ui: 'tdd',
     useColors: true,
     timeout: 15000,
-});
+    reporter: 'mocha-junit-reporter',
+    reporterOptions: {
+        mochaFile: '../../junit.xml',
+        toConsole: true,
+    }
+} as any);
 
 module.exports = testRunner;

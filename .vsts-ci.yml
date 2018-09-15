@@ -14,3 +14,7 @@ steps:
   inputs:
     command: custom
     customCommand: 'run test:posix'
+- task: PublishTestResults@2
+  inputs:
+    testResultsFormat: JUnit
+    testResultsFiles: junit.xml
