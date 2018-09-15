@@ -285,7 +285,7 @@ for (const combination of combine()) {
   writeFileSync(join('src', 'handlers', combination.handler + '.g.ts'), `
 // This is a generated file, to make it yours, remove it from the .gitignore of this repository
 import LinkContextRecognizer from '../LinkContextRecognizer.g';
-export default function({}: LinkContextRecognizer${combination.trigger ? '' : ', character: string'}): undefined | ${states.map(state => `'${state}'`).join(' | ')} | null {
+export default function({}: LinkContextRecognizer${combination.trigger ? '' : ', _character: string'}): undefined | ${states.map(state => `'${state}'`).join(' | ')} | null {
   throw new Error("The handler '${combination.handler}' has not been implemented.");
 }
 `, 'utf8');
