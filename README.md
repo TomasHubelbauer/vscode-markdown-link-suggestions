@@ -10,6 +10,22 @@ Suggests local files and local MarkDown file headers when typing MarkDown links 
 
 ![Screenshot](screenshot.gif)
 
+## Running
+
+VS Code F5
+
+## Testing
+
+VS Code F5 for tests
+
+Or `npm run test:posix` or `npm run test:win32`
+
+See Azure DevOps and Travis for CI
+
+## Deploying
+
+`vsce publish`
+
 ## Release Notes
 
 See the [change log](CHANGELOG.md).

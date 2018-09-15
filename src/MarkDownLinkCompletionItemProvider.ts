@@ -50,6 +50,7 @@ export default class MarkDownLinkCompletionItemProvider implements CompletionIte
           // Only suggest local file headers
           const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', document.uri)) as SymbolInformation[];
           const headers = symbols.filter(symbol => symbol.kind === SymbolKind.String); // VS Code API detected headers
+          console.log('headers', headers);
           for (const header of headers) {
             items.push(this.item(CompletionItemKind.Reference, document.uri.fsPath, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange, true));
           }

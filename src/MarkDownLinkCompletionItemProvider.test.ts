@@ -29,7 +29,8 @@ test('CompletionItemProvider headers', async () => {
     await textEditor.edit(editBuilder => editBuilder.insert(textDocument.lineAt(textDocument.lineCount - 1).rangeIncludingLineBreak.end, '\n' + '[](#'));
 
     const { items } = await commands.executeCommand('vscode.executeCompletionItemProvider', textDocument.uri, textDocument.lineAt(textDocument.lineCount - 1).range.end) as CompletionList;
-
+    console.log('text', textDocument.getText());
+    console.log('items', items);
     ok(items);
     equal(items.length, 3);
 
