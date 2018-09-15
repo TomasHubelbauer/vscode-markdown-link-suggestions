@@ -15,8 +15,8 @@ steps:
     command: custom
     customCommand: 'run test:posix'
 - script: |
-    echo %cd%
-    dir
+    echo $PWD
+    ls
 - task: PublishTestResults@2
   inputs:
     testResultsFormat: JUnit
