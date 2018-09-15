@@ -15,7 +15,7 @@ or search for *markdown link suggestions* in VS Code Extensions pane.
 
 ## Updating
 
-See the [change log](CHANGELOG.md).
+See the [release history](CHANGELOG.md).
 
 Visual Studio Code will update the extension for you automatically by default.
 If you wish to change this behavior, set `extensions.autoUpdate` configuration value to `false` in VS Code's `settings.json`.
