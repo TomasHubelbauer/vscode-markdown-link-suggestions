@@ -1,47 +1,64 @@
-'use strict';
+import MarkDownLinkDocumentSymbolProvider from './MarkDownLinkDocumentSymbolProvider';
+import MarkDownLinkDocumentLinkProvider from './MarkDownLinkDocumentLinkProvider';
+import MarkDownLinkCompletionItemProvider from './MarkDownLinkCompletionItemProvider';
+import getNonExcludedFiles from './getNonExcludedFiles';
+import provideDiagnostics from './provideDiagnostics';
+import MarkDownLinkCodeActionProvider from './MarkDownLinkCodeActionProvider';
+import { ExtensionContext, workspace, languages, commands } from 'vscode';
+import { writeFile } from 'fs-extra';
 
-import * as fsExtra from 'fs-extra';
-import { ExtensionContext, Uri, languages, workspace, commands } from 'vscode';
-import LinkContextRecognizerBase from './LinkContextRecognizerBase';
-import drainAsyncIterator from './drainAsyncIterator';
-import LinkDiagnosticProvider from './LinkDiagnosticProvider';
-import LinkCompletionItemProvider from './LinkCompletionItemProvider';
-import LinkCodeActionProvider from './LinkCodeActionProvider';
-import LinkDocumentLinkProvider from './LinkDocumentLinkProvider';
-
-// Fix for Node runtime (VS Code is running Node 8.9.3 but this will natively work in Node 10)
-if (Symbol["asyncIterator"] === undefined) {
-  ((Symbol as any)["asyncIterator"]) = Symbol.for("asyncIterator");
-}
-
-export function activate(context: ExtensionContext) {
-  if (workspace.workspaceFolders === undefined) {
+export async function activate(context: ExtensionContext) {
     // Ignore files opened without a folder.
-    return;
-  }
-
-  const markDownDocumentSelector = { scheme: 'file', language: 'markdown' };
-  const { allowFullSuggestMode, allowSuggestionsForHeaders } = workspace.getConfiguration('markdown-link-suggestions');
-  const linkCompletionItemProvider = new LinkCompletionItemProvider(allowFullSuggestMode, allowSuggestionsForHeaders);
-  context.subscriptions.push(languages.registerCompletionItemProvider(markDownDocumentSelector, linkCompletionItemProvider, ...LinkContextRecognizerBase.getTriggerCharacters()));
-  const linkDiagnosticProvider = new LinkDiagnosticProvider();
-  context.subscriptions.push(linkDiagnosticProvider);
-
-  languages.registerDocumentLinkProvider(markDownDocumentSelector, new LinkDocumentLinkProvider());
-  languages.registerCodeActionsProvider(markDownDocumentSelector, new LinkCodeActionProvider());
-
-  commands.registerCommand('extension.createMissingFile', async (missingFilePath: string, reportingDocumentUri: Uri) => {
-    await fsExtra.writeFile(missingFilePath, '');
-    // TODO: Unhack
-    const textDocument = await workspace.openTextDocument(reportingDocumentUri);
-    (linkDiagnosticProvider as any).diagnosticCollection.set(reportingDocumentUri, await drainAsyncIterator(linkDiagnosticProvider.provideDiagnostics(textDocument)));
-  });
-
-  workspace.onDidChangeConfiguration(event => {
-    if (event.affectsConfiguration('markdown-link-suggestions')) {
-      const { allowFullSuggestMode, allowSuggestionsForHeaders } = workspace.getConfiguration('markdown-link-suggestions');
-      linkCompletionItemProvider.allowFullSuggestMode = allowFullSuggestMode;
-      linkCompletionItemProvider.allowSuggestionsForHeaders = allowSuggestionsForHeaders;
+    if (workspace.workspaceFolders === undefined) {
+        return;
     }
-  });
+
+    const markDownDocumentSelector = { scheme: 'file', language: 'markdown' };
+    const { allowFullSuggestMode, allowSuggestionsForHeaders } = workspace.getConfiguration('markdown-link-suggestions');
+    const linkCompletionItemProvider = new MarkDownLinkCompletionItemProvider(allowFullSuggestMode, allowSuggestionsForHeaders);
+    context.subscriptions.push(languages.registerCompletionItemProvider(markDownDocumentSelector, linkCompletionItemProvider, '[', '(', '#'));
+    // Spike:
+    // context.subscriptions.push(languages.registerCompletionItemProvider(markDownDocumentSelector, linkCompletionItemProvider, ...LinkContextRecognizerBase.getTriggerCharacters()));
+    context.subscriptions.push(languages.registerDocumentSymbolProvider(markDownDocumentSelector, new MarkDownLinkDocumentSymbolProvider()));
+    context.subscriptions.push(languages.registerDocumentLinkProvider(markDownDocumentSelector, new MarkDownLinkDocumentLinkProvider()));
+    context.subscriptions.push(languages.registerCodeActionsProvider(markDownDocumentSelector, new MarkDownLinkCodeActionProvider()));
+
+    const diagnosticCollection = languages.createDiagnosticCollection('MarkDown Links');
+    context.subscriptions.push(diagnosticCollection);
+    const watcher = workspace.createFileSystemWatcher('**/*.md');
+    context.subscriptions.push(watcher);
+
+    watcher.onDidChange(async uri => {
+        const textDocument = await workspace.openTextDocument(uri);
+        diagnosticCollection.set(uri, await provideDiagnostics(textDocument));
+    });
+
+    watcher.onDidCreate(async uri => {
+        const textDocument = await workspace.openTextDocument(uri);
+        diagnosticCollection.set(uri, await provideDiagnostics(textDocument));
+    });
+
+    watcher.onDidDelete(uri => diagnosticCollection.delete(uri));
+
+    // TODO: Replace this with the VS Code built-in command
+    commands.registerCommand('extension.createMissingFile', async (missingFilePath: string, reportingDocumentUri: Uri) => {
+        await writeFile(missingFilePath, '');
+        // TODO: Unhack
+        const textDocument = await workspace.openTextDocument(reportingDocumentUri);
+        diagnosticCollection.set(reportingDocumentUri, await provideDiagnostics(textDocument));
+    });
+
+    workspace.onDidChangeConfiguration(event => {
+        if (event.affectsConfiguration('markdown-link-suggestions')) {
+            const { allowFullSuggestMode, allowSuggestionsForHeaders } = workspace.getConfiguration('markdown-link-suggestions');
+            linkCompletionItemProvider.allowFullSuggestMode = allowFullSuggestMode;
+            linkCompletionItemProvider.allowSuggestionsForHeaders = allowSuggestionsForHeaders;
+        }
+    });
+
+    const files = await getNonExcludedFiles();
+    for (const file of files) {
+        const textDocument = await workspace.openTextDocument(file);
+        diagnosticCollection.set(file, await provideDiagnostics(textDocument));
+    }
 }

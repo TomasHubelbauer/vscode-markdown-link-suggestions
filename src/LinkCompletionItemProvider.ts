@@ -1,10 +1,10 @@
-import { CompletionItemProvider, TextDocument, Position, CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, commands, SymbolInformation, SymbolKind, Uri } from "vscode";
+import { CompletionItemProvider, TextDocument, Position, CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, commands, SymbolInformation, SymbolKind } from "vscode";
 import LinkContextRecognizer from "./LinkContextRecognizer";
 import { dirname, extname, basename, relative, normalize, win32, posix } from "path";
 import anchorize from "./anchorize";
-import getNonExcludedFilePaths from "./getNonExcludedFilePaths";
+import getNonExcludedFiles from "./getNonExcludedFiles";
 
-export default class LinkCompletionItemProvider implements CompletionItemProvider {
+export default class SpikeCompletionItemProvider implements CompletionItemProvider {
   // TODO: Revisit these
   public allowFullSuggestMode = false;
   public allowSuggestionsForHeaders = true;
@@ -52,12 +52,12 @@ export default class LinkCompletionItemProvider implements CompletionItemProvide
 
     const documentDirectoryPath = dirname(document.uri.fsPath);
 
-    const files = await getNonExcludedFilePaths();
+    const files = await getNonExcludedFiles();
     for (const file of files) {
-      items.push(this.makeFileCompletionItem(file, documentDirectoryPath));
-      if (extname(file).toUpperCase() === '.MD') {
+      items.push(this.makeFileCompletionItem(file.path, documentDirectoryPath));
+      if (extname(file.path).toUpperCase() === '.MD') {
         const symbols = await commands.executeCommand('vscode.executeWorkspaceSymbolProvider', '') as SymbolInformation[];
-        const headers = symbols.filter(symbol => symbol.location.uri === Uri.file(file) && symbol.kind === SymbolKind.String);
+        const headers = symbols.filter(symbol => symbol.location.uri === file && symbol.kind === SymbolKind.String);
         for (const header of headers) {
           items.push(new CompletionItem(file + '#' + header.name, CompletionItemKind.File));
         }
@@ -65,7 +65,7 @@ export default class LinkCompletionItemProvider implements CompletionItemProvide
     }
 
     const directories = files.reduce((directoryPaths, filePath) => {
-      const directoryPath = dirname(filePath);
+      const directoryPath = dirname(filePath.path);
       if (!directoryPaths.includes(directoryPath)) {
         directoryPaths.push(directoryPath);
       }

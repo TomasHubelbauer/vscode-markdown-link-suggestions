@@ -1,0 +1,20 @@
+resources:
+- repo: self
+queue:
+  name: Hosted macOS
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSpec: 10.x
+    checkLatest: true
+- task: Npm@1
+  inputs:
+    command: install
+- task: Npm@1
+  inputs:
+    command: custom
+    customCommand: 'run test:posix'
+- task: PublishTestResults@2
+  inputs:
+    testResultsFormat: JUnit
+    testResultsFiles: 'junit.xml'
