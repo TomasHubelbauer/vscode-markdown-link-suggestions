@@ -156,6 +156,7 @@ sourceFile.statements = createNodeArray(
           ],
           createBlock(
             [
+              createStatement(createCall(createIdentifier('console.log'), undefined, [createLiteral('>>>>>>>>>>'), createIdentifier('line'), createLiteral('<<<<<<<<<<')])),
               createStatement(createAssignment(createIdentifier('index'), createBinary(createIdentifier('index'), SyntaxKind.BarBarToken, createIdentifier('line.length - 1')))),
               createVariableStatement(
                 undefined,
@@ -217,6 +218,11 @@ sourceFile.statements = createNodeArray(
                                             createCall(createIdentifier(`this.${triggerCharacter.name}${capitalize(state)}.handle`), undefined, [createThis()]),
                                           )
                                         ),
+                                        createStatement(
+                                          createCall(createIdentifier('console.log'),
+                                            undefined,
+                                            [createIdentifier('index'), createIdentifier('character'), createLiteral(`${triggerCharacter.name}${capitalize(state)}`), createIdentifier('state'), createLiteral('->'), createIdentifier('stateTransition')]
+                                          )),
                                         createBreak(),
                                       ]
                                     )),
@@ -242,6 +248,11 @@ sourceFile.statements = createNodeArray(
                                             createCall(createIdentifier(`this.${nonTriggerCharacter}${capitalize(state)}.handle`), undefined, [createThis(), createIdentifier('character')]),
                                           )
                                         ),
+                                        createStatement(
+                                          createCall(createIdentifier('console.log'),
+                                            undefined,
+                                            [createIdentifier('index'), createIdentifier('character'), createLiteral(`${nonTriggerCharacter}${capitalize(state)}`), createIdentifier('state'), createLiteral('->'), createIdentifier('stateTransition')]
+                                          )),
                                         createBreak(),
                                       ]
                                     )),
