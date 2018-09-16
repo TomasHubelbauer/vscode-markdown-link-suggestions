@@ -24,12 +24,29 @@ const triggerCharacters = [
   { value: ')', name: 'closingRoundBracket' },
 ];
 
+const handlers = triggerCharacters
+  .reduce((handlers, triggerCharacter) => [
+    ...handlers,
+    ...states.map(state => {
+      const camelCase = `${triggerCharacter.name}${capitalize(state)}`;
+      const titleCase = `${capitalize(triggerCharacter.name)}${capitalize(state)}`;
+      const exists = pathExistsSync(join('src', 'handlers', camelCase + '.ts'));
+      return { camelCase, titleCase, trigger: true, exists };
+    })
+  ], [] as { camelCase: string; titleCase: string; trigger: boolean; exists: boolean; }[])
+  .concat(states.map(state => {
+    const camelCase = `${nonTriggerCharacter}${capitalize(state)}`;
+    const titleCase = `${capitalize(nonTriggerCharacter)}${capitalize(state)}`;
+    const exists = pathExistsSync(join('src', 'handlers', camelCase + '.ts'));
+    return { camelCase, titleCase, trigger: false, exists };
+  }));
+
 let sourceFile = createSourceFile('LinkContextRecognizer.g.ts', '', ScriptTarget.Latest, undefined, ScriptKind.TS);
 sourceFile.statements = createNodeArray(
   [
     createEmptyStatement(),
-    ...combine()
-      .map(combination => createImportDeclaration(undefined, undefined, createImportClause(createIdentifier(combination.handlerTitleCase), undefined), createLiteral(`./handlers/${combination.handlerTitleCase}${combination.exists ? '' : '.g'}`))),
+    ...handlers
+      .map(handler => createImportDeclaration(undefined, undefined, createImportClause(createIdentifier(handler.titleCase), undefined), createLiteral(`./handlers/${handler.titleCase}${handler.exists ? '' : '.g'}`))),
     createClassDeclaration(
       undefined,
       [
@@ -122,15 +139,14 @@ sourceFile.statements = createNodeArray(
           createUnionTypeNode([createKeywordTypeNode(SyntaxKind.StringKeyword), createKeywordTypeNode(SyntaxKind.UndefinedKeyword)]),
           createIdentifier('undefined'),
         ),
-        ...combine()
-          .map(combination => createProperty(
-            undefined,
-            [createToken(SyntaxKind.PublicKeyword), createToken(SyntaxKind.ReadonlyKeyword)],
-            combination.handlerCamelCase,
-            undefined,
-            createTypeReferenceNode(combination.handlerTitleCase, []),
-            createNew(createIdentifier(combination.handlerTitleCase), undefined, [])
-          )),
+        ...handlers.map(handler => createProperty(
+          undefined,
+          [createToken(SyntaxKind.PublicKeyword), createToken(SyntaxKind.ReadonlyKeyword)],
+          handler.camelCase,
+          undefined,
+          createTypeReferenceNode(handler.titleCase, []),
+          createNew(createIdentifier(handler.titleCase), undefined, [])
+        )),
         createConstructor(
           undefined,
           undefined,
@@ -251,7 +267,7 @@ sourceFile.statements = createNodeArray(
               createIf(createBinary(createIdentifier('this.pathComponents'), SyntaxKind.EqualsEqualsEqualsToken, createIdentifier('undefined')), createStatement(createDelete(createIdentifier('this.pathComponents')))),
               createIf(createBinary(createIdentifier('this.query'), SyntaxKind.EqualsEqualsEqualsToken, createIdentifier('undefined')), createStatement(createDelete(createIdentifier('this.query')))),
               createIf(createBinary(createIdentifier('this.fragment'), SyntaxKind.EqualsEqualsEqualsToken, createIdentifier('undefined')), createStatement(createDelete(createIdentifier('this.fragment')))),
-              ...combine().map(combination => createStatement(createDelete(createIdentifier(`(this as any).${combination.handlerCamelCase}`)))),
+              ...handlers.map(handler => createStatement(createDelete(createIdentifier(`(this as any).${handler.camelCase}`)))),
             ],
             true,
           )
@@ -266,47 +282,28 @@ addSyntheticLeadingComment(sourceFile.statements[0], SyntaxKind.MultiLineComment
 * This is a generated file. Any manual changes will be lost the next time is is regenerated using \`npm run generate\`!
 `, true);
 
-// TODO: Figure out how to write this using TypeScript
+// TODO: Figure out how to write this using the TypeScript compiler API too
 const sourceCode = createPrinter().printNode(EmitHint.Unspecified, sourceFile, sourceFile);
 sourceFile = sourceFile.update(sourceCode, createTextChangeRange(createTextSpan(sourceFile.getStart(), sourceFile.getEnd()), sourceCode.length));
 
 writeFileSync(join('src', sourceFile.fileName), sourceFile.getFullText(), 'utf8');
 ensureDirSync(join('src', 'handlers'));
-for (const combination of combine()) {
+for (const handler of handlers) {
   // Skip .g.ts where there is .ts
-  if (combination.exists) {
+  if (handler.exists) {
     continue;
   }
 
-  writeFileSync(join('src', 'handlers', combination.handlerTitleCase + '.g.ts'), `
+  writeFileSync(join('src', 'handlers', handler.titleCase + '.g.ts'), `
 // This is a generated file, to make it yours, change the extension from .g.ts to .ts (VS Code will rename the \`import\` in \`LinkContextRecognizer\` for you)
 import LinkContextRecognizer from '../LinkContextRecognizer.g';
 
-export default class ${combination.handlerTitleCase} {
-  public handle(_recognizer: LinkContextRecognizer${combination.trigger ? '' : ', _character: string'}): undefined | ${states.map(state => `'${state}'`).join(' | ')} | null {
-    throw new Error("The handler '${combination.handlerTitleCase}' has not been implemented.");
+export default class ${handler.titleCase} {
+  public handle(_recognizer: LinkContextRecognizer${handler.trigger ? '' : ', _character: string'}): undefined | ${states.map(state => `'${state}'`).join(' | ')} | null {
+    throw new Error("The handler '${handler.titleCase}' has not been implemented.");
   }
 }
 `.replace(/^\s/, ''), 'utf8');
-}
-
-function combine() {
-  return triggerCharacters
-    .reduce((combinations, triggerCharacter) => [
-      ...combinations,
-      ...states.map(state => {
-        const handlerCamelCase = `${triggerCharacter.name}${capitalize(state)}`;
-        const handlerTitleCase = `${capitalize(triggerCharacter.name)}${capitalize(state)}`;
-        const exists = pathExistsSync(join('src', 'handlers', handlerCamelCase + '.ts'));
-        return { handlerCamelCase, handlerTitleCase, trigger: true, exists };
-      })
-    ], [] as { handlerCamelCase: string; handlerTitleCase: string; trigger: boolean; exists: boolean; }[])
-    .concat(states.map(state => {
-      const handlerCamelCase = `${nonTriggerCharacter}${capitalize(state)}`;
-      const handlerTitleCase = `${capitalize(nonTriggerCharacter)}${capitalize(state)}`;
-      const exists = pathExistsSync(join('src', 'handlers', handlerCamelCase + '.ts'));
-      return { handlerCamelCase, handlerTitleCase, trigger: false, exists };
-    }));
 }
 
 function capitalize(state: string) {
