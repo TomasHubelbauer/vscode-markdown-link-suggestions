@@ -104,7 +104,7 @@ sourceFile.statements = createNodeArray(
           [
             createToken(SyntaxKind.PublicKeyword),
           ],
-          'path',
+          'scheme',
           undefined,
           createUnionTypeNode([createKeywordTypeNode(SyntaxKind.StringKeyword), createKeywordTypeNode(SyntaxKind.UndefinedKeyword)]),
           createIdentifier('undefined'),
@@ -114,7 +114,7 @@ sourceFile.statements = createNodeArray(
           [
             createToken(SyntaxKind.PublicKeyword),
           ],
-          'pathComponents',
+          'path',
           undefined,
           createUnionTypeNode([createArrayTypeNode(createKeywordTypeNode(SyntaxKind.StringKeyword)), createKeywordTypeNode(SyntaxKind.UndefinedKeyword)]),
           createIdentifier('undefined'),
@@ -274,8 +274,8 @@ sourceFile.statements = createNodeArray(
               ),
               createIf(createBinary(createIdentifier('this.cursor'), SyntaxKind.EqualsEqualsEqualsToken, createIdentifier('undefined')), createStatement(createDelete(createIdentifier('this.cursor')))),
               createIf(createBinary(createIdentifier('this.text'), SyntaxKind.EqualsEqualsEqualsToken, createIdentifier('undefined')), createStatement(createDelete(createIdentifier('this.text')))),
+              createIf(createBinary(createIdentifier('this.scheme'), SyntaxKind.EqualsEqualsEqualsToken, createIdentifier('undefined')), createStatement(createDelete(createIdentifier('this.scheme')))),
               createIf(createBinary(createIdentifier('this.path'), SyntaxKind.EqualsEqualsEqualsToken, createIdentifier('undefined')), createStatement(createDelete(createIdentifier('this.path')))),
-              createIf(createBinary(createIdentifier('this.pathComponents'), SyntaxKind.EqualsEqualsEqualsToken, createIdentifier('undefined')), createStatement(createDelete(createIdentifier('this.pathComponents')))),
               createIf(createBinary(createIdentifier('this.query'), SyntaxKind.EqualsEqualsEqualsToken, createIdentifier('undefined')), createStatement(createDelete(createIdentifier('this.query')))),
               createIf(createBinary(createIdentifier('this.fragment'), SyntaxKind.EqualsEqualsEqualsToken, createIdentifier('undefined')), createStatement(createDelete(createIdentifier('this.fragment')))),
               ...handlers.map(handler => createStatement(createDelete(createIdentifier(`(this as any).${handler.camelCase}`)))),

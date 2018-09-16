@@ -18,7 +18,7 @@ export default class SpikeCompletionItemProvider implements CompletionItemProvid
 
   public async provideCompletionItems(document: TextDocument, position: Position, _token: CancellationToken, _context: CompletionContext) {
     // Parse out the MarkDown link context we are in
-    const { text, path, pathComponents, query, fragment } = new LinkContextRecognizer(document.lineAt(position.line).text, position.character);
+    const { text, path, query, fragment } = new LinkContextRecognizer(document.lineAt(position.line).text, position.character);
     const items: CompletionItem[] = [];
 
     // Suggest headers
@@ -40,7 +40,7 @@ export default class SpikeCompletionItemProvider implements CompletionItemProvid
     if (path !== null) {
       console.log('Suggest paths');
       // TODO: Check for scheme or better yet add it to the parser
-      console.log(pathComponents);
+      console.log(path);
       throw new Error();
     }
 
