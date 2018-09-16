@@ -4,6 +4,7 @@ import {
   createCaseClause, createFor, createParameter, createBinary, createPostfix, createVariableDeclaration, createVariableStatement, createElementAccess,
   createDefaultClause, createBreak, createCall, createStatement, createThis, createNodeArray, createImportClause, createImportDeclaration, createEmptyStatement,
   createAssignment, createUnionTypeNode, createLiteralTypeNode, createIf, createContinue, createConstructor, createArrayTypeNode, createThrow, createNew, createDelete,
+  createTypeReferenceNode,
 } from 'typescript';
 import { writeFileSync } from 'fs';
 import { join } from 'path';
@@ -28,7 +29,7 @@ sourceFile.statements = createNodeArray(
   [
     createEmptyStatement(),
     ...combine()
-      .map(combination => createImportDeclaration(undefined, undefined, createImportClause(createIdentifier(combination.handler), undefined), createLiteral(`./handlers/${combination.handler}${combination.exists ? '' : '.g'}`))),
+      .map(combination => createImportDeclaration(undefined, undefined, createImportClause(createIdentifier(combination.handlerTitleCase), undefined), createLiteral(`./handlers/${combination.handlerTitleCase}${combination.exists ? '' : '.g'}`))),
     createClassDeclaration(
       undefined,
       [
@@ -121,6 +122,15 @@ sourceFile.statements = createNodeArray(
           createUnionTypeNode([createKeywordTypeNode(SyntaxKind.StringKeyword), createKeywordTypeNode(SyntaxKind.UndefinedKeyword)]),
           createIdentifier('undefined'),
         ),
+        ...combine()
+          .map(combination => createProperty(
+            undefined,
+            [createToken(SyntaxKind.PublicKeyword), createToken(SyntaxKind.ReadonlyKeyword)],
+            combination.handlerCamelCase,
+            undefined,
+            createTypeReferenceNode(combination.handlerTitleCase, []),
+            createNew(createIdentifier(combination.handlerTitleCase), undefined, [])
+          )),
         createConstructor(
           undefined,
           undefined,
@@ -188,7 +198,7 @@ sourceFile.statements = createNodeArray(
                                         createStatement(
                                           createAssignment(
                                             createIdentifier('stateTransition'),
-                                            createCall(createIdentifier(`${triggerCharacter.name}${capitalize(state)}`), undefined, [createThis()]),
+                                            createCall(createIdentifier(`this.${triggerCharacter.name}${capitalize(state)}.handle`), undefined, [createThis()]),
                                           )
                                         ),
                                         createBreak(),
@@ -213,7 +223,7 @@ sourceFile.statements = createNodeArray(
                                         createStatement(
                                           createAssignment(
                                             createIdentifier('stateTransition'),
-                                            createCall(createIdentifier(`${nonTriggerCharacter}${capitalize(state)}`), undefined, [createThis(), createIdentifier('character')]),
+                                            createCall(createIdentifier(`this.${nonTriggerCharacter}${capitalize(state)}.handle`), undefined, [createThis(), createIdentifier('character')]),
                                           )
                                         ),
                                         createBreak(),
@@ -241,6 +251,7 @@ sourceFile.statements = createNodeArray(
               createIf(createBinary(createIdentifier('this.pathComponents'), SyntaxKind.EqualsEqualsEqualsToken, createIdentifier('undefined')), createStatement(createDelete(createIdentifier('this.pathComponents')))),
               createIf(createBinary(createIdentifier('this.query'), SyntaxKind.EqualsEqualsEqualsToken, createIdentifier('undefined')), createStatement(createDelete(createIdentifier('this.query')))),
               createIf(createBinary(createIdentifier('this.fragment'), SyntaxKind.EqualsEqualsEqualsToken, createIdentifier('undefined')), createStatement(createDelete(createIdentifier('this.fragment')))),
+              ...combine().map(combination => createStatement(createDelete(createIdentifier(`(this as any).${combination.handlerCamelCase}`)))),
             ],
             true,
           )
@@ -252,7 +263,7 @@ sourceFile.statements = createNodeArray(
 );
 
 addSyntheticLeadingComment(sourceFile.statements[0], SyntaxKind.MultiLineCommentTrivia, `
-This is a generated file. Any manual changes will be lost the next time is is regenerated using \`npm run generate\`!
+* This is a generated file. Any manual changes will be lost the next time is is regenerated using \`npm run generate\`!
 `, true);
 
 // TODO: Figure out how to write this using TypeScript
@@ -267,18 +278,16 @@ for (const combination of combine()) {
     continue;
   }
 
-  writeFileSync(join('src', 'handlers', combination.handler + '.g.ts'), `
-// This is a generated file, to make it yours, change the extension from .g.ts to .ts (VS Code will rename the imports)
+  writeFileSync(join('src', 'handlers', combination.handlerTitleCase + '.g.ts'), `
+// This is a generated file, to make it yours, change the extension from .g.ts to .ts (VS Code will rename the \`import\` in \`LinkContextRecognizer\` for you)
 import LinkContextRecognizer from '../LinkContextRecognizer.g';
-import State from './state';
 
-const state = new State();
-
-export default function(self: LinkContextRecognizer${combination.trigger ? '' : ', _character: string'}): undefined | ${states.map(state => `'${state}'`).join(' | ')} | null {
-  const data = state.for(self);
-  throw new Error("The handler '${combination.handler}' has not been implemented.");
+export default class ${combination.handlerTitleCase} {
+  public handle(_recognizer: LinkContextRecognizer${combination.trigger ? '' : ', _character: string'}): undefined | ${states.map(state => `'${state}'`).join(' | ')} | null {
+    throw new Error("The handler '${combination.handlerTitleCase}' has not been implemented.");
+  }
 }
-`, 'utf8');
+`.replace(/^\s/, ''), 'utf8');
 }
 
 function combine() {
@@ -286,15 +295,17 @@ function combine() {
     .reduce((combinations, triggerCharacter) => [
       ...combinations,
       ...states.map(state => {
-        const handler = `${triggerCharacter.name}${capitalize(state)}`;
-        const exists = pathExistsSync(join('src', 'handlers', handler + '.ts'));
-        return { handler, trigger: true, exists };
+        const handlerCamelCase = `${triggerCharacter.name}${capitalize(state)}`;
+        const handlerTitleCase = `${capitalize(triggerCharacter.name)}${capitalize(state)}`;
+        const exists = pathExistsSync(join('src', 'handlers', handlerCamelCase + '.ts'));
+        return { handlerCamelCase, handlerTitleCase, trigger: true, exists };
       })
-    ], [] as { handler: string; trigger: boolean; exists: boolean; }[])
+    ], [] as { handlerCamelCase: string; handlerTitleCase: string; trigger: boolean; exists: boolean; }[])
     .concat(states.map(state => {
-      const handler = `${nonTriggerCharacter}${capitalize(state)}`;
-      const exists = pathExistsSync(join('src', 'handlers', handler + '.ts'));
-      return { handler, trigger: false, exists };
+      const handlerCamelCase = `${nonTriggerCharacter}${capitalize(state)}`;
+      const handlerTitleCase = `${capitalize(nonTriggerCharacter)}${capitalize(state)}`;
+      const exists = pathExistsSync(join('src', 'handlers', handlerCamelCase + '.ts'));
+      return { handlerCamelCase, handlerTitleCase, trigger: false, exists };
     }));
 }
 

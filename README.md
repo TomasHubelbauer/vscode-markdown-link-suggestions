@@ -51,16 +51,4 @@ Deploying is not currently done on CI, instead it is manual:
 
 ## Contributing
 
-**Note to self to restore context next time:**
-
-Currently, the project is undergoing a slight rewrite which aims to change the way the suggestions work.
-Instead of only suggesting on `[` and `(`, more trigger characters are identified, including `/` which will suggest correct relative paths.
-
-There is a code generator for a parser of the link context in relation to the cursor.
-The design of it is mostly complete and a couple of test cases work, but there is a problem which needs to be solved:
-
-While the parser instance is created on demand for each new suggestion provider invocation or test case,
-the modules statically referenced by the parser are not reset after the parser is disposed and thus data seep over to the next run.
-
-To solve this, either dynamic references could be utilized, or the handlers could be changed to classes and instantiated on demand
-in the parser constructor. The latter is probably cleaner as dynamic references would be needless I/O, if it would even work correctly.
+See [the todoes](todo).

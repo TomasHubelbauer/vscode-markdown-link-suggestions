@@ -1,9 +1,11 @@
 import LinkContextRecognizer from '../LinkContextRecognizer.g';
-import { charactersReverse } from './nonTriggerCharacterPath';
 
-export default function (self: LinkContextRecognizer): undefined | 'path' | 'pathTransition' | 'pathPriorHash' | 'pathPriorQuery' | 'pathPriorQueryTransition' | 'pathPriorSlash' | 'pathPriorSlashTransition' | 'text' | null {
-  self.path = charactersReverse.for(self).reverse().join('');
-  self.pathComponents = [self.path];
-  self.cursor = 'path';
-  return 'pathTransition';
+export default class OpeningRoundBracket {
+  public handle(recognizer: LinkContextRecognizer): undefined | 'path' | 'pathTransition' | 'pathPriorHash' | 'pathPriorQuery' | 'pathPriorQueryTransition' | 'pathPriorSlash' | 'pathPriorSlashTransition' | 'text' | null {
+    const path = recognizer.nonTriggerCharacterPath.charactersReverse.reverse().join('');
+    recognizer.path = path;
+    recognizer.pathComponents = [path];
+    recognizer.cursor = 'path';
+    return 'pathTransition';
+  }
 }
