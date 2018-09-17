@@ -63,7 +63,7 @@ This extension uses ApplicationInsights from Azure for telemetry and events coll
 
 After initial testing, the event scope will be reduced to just suggestion errors to aid in fixing.
 
-**If you'd prefer telemtry not be collected, pleae disable VS Code telemetry.**
+**If you'd prefer telemetry not be collected, pleae disable VS Code telemetry.**
 
 [You can learn how to do so here](https://code.visualstudio.com/docs/supporting/FAQ#_how-to-disable-telemetry-reporting).
 
