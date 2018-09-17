@@ -2,8 +2,6 @@
 
 [![](https://vsmarketplacebadge.apphb.com/installs-short/TomasHubelbauer.vscode-markdown-link-suggestions.svg)](https://marketplace.visualstudio.com/items?itemName=TomasHubelbauer.vscode-markdown-link-suggestions)
 
-
-
 Suggests workspace files and MarkDown file headers in MarkDown links.
 
 ![Screenshot](screenshot.gif)
@@ -38,6 +36,12 @@ Run tests either using VS Code *Extension Tests* debug configuration or by runni
 - `npm run test:posix`
 - `npm run test:win32`
 
+It's recommended the extension is tested locally for a few days before rolling it out after bigger changes have been made:
+
+- Disable the Marketplace version of the extension
+- Execute `vsce package`
+- Use the *Install from VSIX…* command to install the VSIX package version
+
 ## Deploying
 
 Deploying is not currently done on CI, instead it is manual:
@@ -68,3 +72,5 @@ After initial testing, the event scope will be reduced to just suggestion errors
 [You can learn how to do so here](https://code.visualstudio.com/docs/supporting/FAQ#_how-to-disable-telemetry-reporting).
 
 The extension respects the VS Code setting and will not send telemetry events against your wishes.
+
+[MarkDown-Link-Suggestions - Events](https://portal.azure.com/#@tomashubelbauerlive.onmicrosoft.com/resource/subscriptions/808a4574-3b06-4368-ab54-bb29b1da0974/resourcegroups/VSCode-Extensions/providers/microsoft.insights/components/MarkDown-Link-Suggestions/events)
