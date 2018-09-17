@@ -9,7 +9,7 @@ export default class BackwardSlashPath {
       recognizer.path = [];
     }
 
-    recognizer.path.unshift(path);
+    recognizer.path.unshift('\\' + path);
     return;
   }
 }
