@@ -52,3 +52,19 @@ Deploying is not currently done on CI, instead it is manual:
 ## Contributing
 
 See [the todoes](todo).
+
+## Monitoring
+
+This extension uses ApplicationInsights from Azure for telemetry and events collected include:
+
+- activation
+- suggestion
+- deactivation
+
+After initial testing, the event scope will be reduced to just suggestion errors to aid in fixing.
+
+**If you'd prefer telemtry not be collected, pleae disable VS Code telemetry.**
+
+[You can learn how to do so here](https://code.visualstudio.com/docs/supporting/FAQ#_how-to-disable-telemetry-reporting).
+
+The extension respects the VS Code setting and will not send telemetry events against your wishes.
