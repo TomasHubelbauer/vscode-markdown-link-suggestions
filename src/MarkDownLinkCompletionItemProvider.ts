@@ -2,6 +2,7 @@ import { CompletionItemProvider, TextDocument, Position, CancellationToken, Comp
 import { dirname, extname, basename, relative, normalize, posix, win32 } from "path";
 import anchorize from "./anchorize";
 import getNonExcludedFiles from "./getNonExcludedFiles";
+import applicationInsights from './telemetry';
 
 export default class MarkDownLinkCompletionItemProvider implements CompletionItemProvider {
   public allowFullSuggestMode = false;
@@ -15,6 +16,8 @@ export default class MarkDownLinkCompletionItemProvider implements CompletionIte
   }
 
   public async provideCompletionItems(document: TextDocument, position: Position, _token: CancellationToken, context: CompletionContext) {
+    applicationInsights.sendTelemetryEvent('suggest');
+
     const character = context.triggerCharacter || /* Ctrl + Space */ document.getText(new Range(position.translate(0, -1), position));
 
     // TODO: Extend to be able to handle suggestions after backspacing (see if this fires but we already have some text)
