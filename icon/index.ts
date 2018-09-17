@@ -1,5 +1,5 @@
 const puppeteer = require('puppeteer');
-const pkg = require('../../package');
+const pkg = require('../package');
 
 const length = 256; // https://code.visualstudio.com/docs/extensionAPI/extension-manifest
 const headless = process.argv[2] !== 'nonheadless';
@@ -9,7 +9,7 @@ void async function () {
   await page.setViewport({ height: length, width: length });
   await page.goto('file:///' + __dirname + '/index.html');
   await page.$eval('body', (body: any, pkg: any) => body.textContent = pkg.displayName + '👌', pkg);
-  await page.screenshot({ omitBackground: true, path: '../../icon.png' });
+  await page.screenshot({ omitBackground: true, path: '../icon.png' });
   if (headless) {
     await window.close();
   }
