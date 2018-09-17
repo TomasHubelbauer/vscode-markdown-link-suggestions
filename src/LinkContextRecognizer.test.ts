@@ -3,6 +3,8 @@ import { deepEqual } from "assert";
 
 // TODO: Introduce combinatorically generated tests
 // TODO: Add tests for scheme
+// TODO: Add tests for fragment and query combinations
+// TODO: Consider adding support for brackets by pair counting probably
 test('LinkContextRecognizer', async () => {
   deepEqual(new LinkContextRecognizer('_ ['), { cursor: 'text', text: '' });
   deepEqual(new LinkContextRecognizer('_ [text'), { cursor: 'text', text: 'text' });
@@ -30,11 +32,6 @@ test('LinkContextRecognizer', async () => {
   deepEqual(new LinkContextRecognizer('_ [text](?f\\r\\a\\g'), { cursor: 'query', text: 'text', path: [''], query: 'f\\r\\a\\g' });
   deepEqual(new LinkContextRecognizer('_ [text](path1/path2?f/r/a/g'), { cursor: 'query', text: 'text', path: ['path1', '/path2'], query: 'f/r/a/g' });
   deepEqual(new LinkContextRecognizer('_ [text](path1\\path2?f\\r\\a\\g'), { cursor: 'query', text: 'text', path: ['path1', '\\path2'], query: 'f\\r\\a\\g' });
-
-  // deepEqual(new LinkContextRecognizer('nada [link](test#a[b]'), { cursor: 'transition', text: 'b' });
-  // deepEqual(new LinkContextRecognizer('nada [link](a?'), { cursor: 'query', text: 'link', path: 'a', pathComponents: ['a'], query: '' });
-  // deepEqual(new LinkContextRecognizer('nada [link](a?#'), { cursor: 'fragment', text: 'link', path: 'a', pathComponents: ['a'], query: '', fragment: '' });
-  // deepEqual(new LinkContextRecognizer('a [b(c)(./i/j.k?t#o.p/q?t'), { cursor: 'fragment', text: 'b(c)', path: './i/j.k', pathComponents: ['.', 'i', 'j.k'], query: 't', fragment: 'o.p/q?t' });
 
   deepEqual(new LinkContextRecognizer('_ ('), {});
   deepEqual(new LinkContextRecognizer('_ ()'), {});
