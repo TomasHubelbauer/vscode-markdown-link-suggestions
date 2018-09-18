@@ -17,9 +17,8 @@
         "noFallthroughCasesInSwitch": true,
         "noUnusedParameters": true,
     },
-    "exclude": [
-        "node_modules",
-        ".vscode-test",
-        "icon"
+    "include": [
+        // This prevents anything (like `icon`) except from `src` to be picked up
+        "src"
     ]
 }
