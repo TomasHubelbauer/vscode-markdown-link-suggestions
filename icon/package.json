@@ -1,5 +1,10 @@
 {
   "name": "icon",
+  "description": "An icon generator for the VS Code MarkDown Link Suggestions extension",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions.git"
+  },
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",

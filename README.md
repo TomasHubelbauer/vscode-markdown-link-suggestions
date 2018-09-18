@@ -38,8 +38,9 @@ Run tests either using VS Code *Extension Tests* debug configuration or by runni
 
 It's recommended the extension is tested locally for a few days before rolling it out after bigger changes have been made:
 
-- Disable the Marketplace version of the extension
+- Disable the installed Marketplace version of the extension
 - Execute `vsce package`
+- Verify only intended files are being packaged by inspecting the VSIX as a ZIP archive
 - Use the *Install from VSIX…* command to install the VSIX package version
 
 ## Deploying
