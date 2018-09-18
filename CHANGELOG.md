@@ -1,5 +1,13 @@
 # Change Log
 
+## `12.0.0` (2018-09-18)
+
+Introduce telemetry in preparation to the upcoming release of the link context recognizer rewrite.
+
+More about the telemetry, including information on how to opt out, in [Monitoring](README.md#monitoring).
+
+More about the new features following the link context recognizer rewrite in upcoming releases.
+
 ## `11.0.1` (2018-09-12)
 
 - Fix suggestions for headers within the very file (`[](#)`) not narrowing down as the user types because of the missing `filterText` bit
