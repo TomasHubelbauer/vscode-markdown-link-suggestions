@@ -33,13 +33,21 @@ export async function activate(context: ExtensionContext) {
     context.subscriptions.push(watcher);
 
     watcher.onDidChange(async uri => {
-        const textDocument = await workspace.openTextDocument(uri);
-        diagnosticCollection.set(uri, await provideDiagnostics(textDocument));
+        try {
+            const textDocument = await workspace.openTextDocument(uri);
+            diagnosticCollection.set(uri, await provideDiagnostics(textDocument));
+        } catch (error) {
+            // Ignore an attempt to open a binary file
+        }
     });
 
     watcher.onDidCreate(async uri => {
-        const textDocument = await workspace.openTextDocument(uri);
-        diagnosticCollection.set(uri, await provideDiagnostics(textDocument));
+        try {
+            const textDocument = await workspace.openTextDocument(uri);
+            diagnosticCollection.set(uri, await provideDiagnostics(textDocument));
+        } catch (error) {
+            // Ignore an attempt to open a binary file
+        }
     });
 
     watcher.onDidDelete(uri => diagnosticCollection.delete(uri));
@@ -62,8 +70,12 @@ export async function activate(context: ExtensionContext) {
 
     const files = await getNonExcludedFiles();
     for (const file of files) {
-        const textDocument = await workspace.openTextDocument(file);
-        diagnosticCollection.set(file, await provideDiagnostics(textDocument));
+        try {
+            const textDocument = await workspace.openTextDocument(file);
+            diagnosticCollection.set(file, await provideDiagnostics(textDocument));
+        } catch (error) {
+            // Ignore an attempt to open a binary file
+        }
     }
 }
 
