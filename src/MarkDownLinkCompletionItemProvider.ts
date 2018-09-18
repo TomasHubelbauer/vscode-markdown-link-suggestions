@@ -16,91 +16,127 @@ export default class MarkDownLinkCompletionItemProvider implements CompletionIte
   }
 
   public async provideCompletionItems(document: TextDocument, position: Position, _token: CancellationToken, context: CompletionContext) {
-    applicationInsights.sendTelemetryEvent('suggest');
-
-    const character = context.triggerCharacter || /* Ctrl + Space */ document.getText(new Range(position.translate(0, -1), position));
-
-    // TODO: Extend to be able to handle suggestions after backspacing (see if this fires but we already have some text)
-    const fullSuggestMode = character === '[';
-    if (fullSuggestMode && !this.allowFullSuggestMode) {
-      return;
-    }
-
-    const documentDirectoryPath = dirname(document.uri.fsPath);
-    const items: CompletionItem[] = [];
-
-    let fullSuggestModeBraceCompleted = false;
-    let partialSuggestModeBraceCompleted = false;
-    const braceCompletionRange = new Range(position, position.translate(0, 1));
-    if (fullSuggestMode) {
-      fullSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ']';
-    } else {
-      // TODO: Handle a case where there is only '(' on the line
-      const linkConfirmationRange = new Range(position.translate(0, -2), position);
-      if (character === '(') {
-        if (document.getText(linkConfirmationRange) === '](') {
-          partialSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ')';
-          // TODO: Read the link text to be able to rank items matching it higher
-        } else {
-          // Bail if this is just a regular parentheses, not MarkDown link
-          return;
-        }
-      } else {
-        const headerLinkConfirmationRange = new Range(position.translate(0, -3), position);
-        // TODO: Integrate this in a bit nicer if possible
-        if (character === '#' && document.getText(headerLinkConfirmationRange) === '](#') {
-          partialSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ')';
-          // Only suggest local file headers
-          const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', document.uri)) as SymbolInformation[] | undefined;
-          if (symbols !== undefined) {
-            const headers = symbols.filter(symbol => symbol.kind === SymbolKind.String); // VS Code API detected headers
-            for (const header of headers) {
-              const item = this.item(CompletionItemKind.Reference, document.uri.fsPath, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange, true);
-              item.filterText = item.insertText + ';' + item.filterText;
-              items.push(item);
-            }
-          }
-
-          return items;
-        } else {
-          // Bail if we are in neither full suggest mode nor partial (link target) suggest mode nor header mode
-          return;
-        }
+    try {
+      try {
+        applicationInsights.sendTelemetryEvent('suggest');
+      } catch {
+        // Defend against AI not working for the first AI release
       }
-    }
 
-    const files = await getNonExcludedFiles();
-    for (const file of files) {
-      if (file.scheme !== 'file') {
+      const character = context.triggerCharacter || /* Ctrl + Space */ document.getText(new Range(position.translate(0, -1), position));
+
+      // TODO: Extend to be able to handle suggestions after backspacing (see if this fires but we already have some text)
+      const fullSuggestMode = character === '[';
+      if (fullSuggestMode && !this.allowFullSuggestMode) {
         return;
       }
 
-      items.push(this.item(CompletionItemKind.File, file.fsPath, null, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
-      if (extname(file.fsPath).toUpperCase() === '.MD' && this.allowSuggestionsForHeaders) {
-        const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', file)) as SymbolInformation[] | undefined;
-        if (symbols !== undefined) {
-          const headers = symbols.filter(symbol => symbol.kind === SymbolKind.String); // VS Code API detected headers
-          for (const header of headers) {
-            items.push(this.item(CompletionItemKind.Reference, file.fsPath, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
+      const documentDirectoryPath = dirname(document.uri.fsPath);
+      const items: CompletionItem[] = [];
+
+      let fullSuggestModeBraceCompleted = false;
+      let partialSuggestModeBraceCompleted = false;
+      const braceCompletionRange = new Range(position, position.translate(0, 1));
+      if (fullSuggestMode) {
+        fullSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ']';
+      } else {
+        // TODO: Handle a case where there is only '(' on the line
+        const linkConfirmationRange = new Range(position.translate(0, -2), position);
+        if (character === '(') {
+          if (document.getText(linkConfirmationRange) === '](') {
+            partialSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ')';
+            // TODO: Read the link text to be able to rank items matching it higher
+          } else {
+            // Bail if this is just a regular parentheses, not MarkDown link
+            return;
+          }
+        } else {
+          const headerLinkConfirmationRange = new Range(position.translate(0, -3), position);
+          // TODO: Integrate this in a bit nicer if possible
+          if (character === '#' && document.getText(headerLinkConfirmationRange) === '](#') {
+            partialSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ')';
+            // Only suggest local file headers
+            const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', document.uri)) as SymbolInformation[] | undefined;
+            if (symbols !== undefined) {
+              const headers = symbols.filter(symbol => symbol.kind === SymbolKind.String); // VS Code API detected headers
+              for (const header of headers) {
+                const item = this.item(CompletionItemKind.Reference, document.uri.fsPath, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange, true);
+                item.filterText = item.insertText + ';' + item.filterText;
+                items.push(item);
+              }
+            }
+
+            try {
+              applicationInsights.sendTelemetryEvent('suggest-headers');
+            } catch {
+              // Defend against AI not working for the first AI release
+            }
+
+            return items;
+          } else {
+            // Bail if we are in neither full suggest mode nor partial (link target) suggest mode nor header mode
+            try {
+              applicationInsights.sendTelemetryEvent('suggest-invalid');
+            } catch {
+              // Defend against AI not working for the first AI release
+            }
+
+            return;
           }
         }
       }
-    }
 
-    const directories = files.reduce((directoryPaths, filePath) => {
-      const directoryPath = dirname(filePath.fsPath);
-      if (!directoryPaths.includes(directoryPath)) {
-        directoryPaths.push(directoryPath);
+      const files = await getNonExcludedFiles();
+      for (const file of files) {
+        items.push(this.item(CompletionItemKind.File, file.fsPath, null, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
+        if (extname(file.fsPath).toUpperCase() === '.MD' && this.allowSuggestionsForHeaders) {
+          try {
+            const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', file)) as SymbolInformation[] | undefined;
+            if (symbols !== undefined) {
+              const headers = symbols.filter(symbol => symbol.kind === SymbolKind.String); // VS Code API detected headers
+              for (const header of headers) {
+                items.push(this.item(CompletionItemKind.Reference, file.fsPath, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
+              }
+            }
+          } catch (error) {
+            // TODO: Figure out what causes the *Error: Illegal argument: resource* error
+            try {
+              applicationInsights.sendTelemetryEvent('suggest-resource', { error: error.toString() });
+            } catch {
+              // Defend against AI not working for the first AI release
+            }
+          }
+        }
       }
 
-      return directoryPaths;
-    }, [] as string[]);
+      const directories = files.reduce((directoryPaths, filePath) => {
+        const directoryPath = dirname(filePath.fsPath);
+        if (!directoryPaths.includes(directoryPath)) {
+          directoryPaths.push(directoryPath);
+        }
 
-    for (const directory of directories) {
-      items.push(this.item(CompletionItemKind.Folder, directory, null, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
+        return directoryPaths;
+      }, [] as string[]);
+
+      for (const directory of directories) {
+        items.push(this.item(CompletionItemKind.Folder, directory, null, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
+      }
+
+      try {
+        applicationInsights.sendTelemetryEvent('suggest-full-partial');
+      } catch {
+        // Defend against AI not working for the first AI release
+      }
+      return items;
+    } catch (error) {
+      try {
+        applicationInsights.sendTelemetryEvent('suggest-failure', { error: error.toString() });
+      } catch {
+        // Defend against AI not working for the first AI release
+      }
     }
 
-    return items;
+    return [];
   }
 
   private item(kind: CompletionItemKind, absoluteFilePath: string, header: SymbolInformation | null, absoluteDocumentDirectoryPath: string, fullSuggestMode: boolean, fullSuggestModeBraceCompleted: boolean, partialSuggestModeBraceCompleted: boolean, braceCompletionRange: Range, hack?: boolean) {
