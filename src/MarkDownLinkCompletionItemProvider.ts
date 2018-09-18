@@ -51,13 +51,16 @@ export default class MarkDownLinkCompletionItemProvider implements CompletionIte
         if (character === '#' && document.getText(headerLinkConfirmationRange) === '](#') {
           partialSuggestModeBraceCompleted = document.getText(braceCompletionRange) === ')';
           // Only suggest local file headers
-          const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', document.uri)) as SymbolInformation[];
-          const headers = symbols.filter(symbol => symbol.kind === SymbolKind.String); // VS Code API detected headers
-          for (const header of headers) {
-            items.push(this.item(CompletionItemKind.Reference, document.uri.fsPath, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange, true));
+          const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', document.uri)) as SymbolInformation[] | undefined;
+          if (symbols !== undefined) {
+            const headers = symbols.filter(symbol => symbol.kind === SymbolKind.String); // VS Code API detected headers
+            for (const header of headers) {
+              const item = this.item(CompletionItemKind.Reference, document.uri.fsPath, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange, true);
+              item.filterText = item.insertText + ';' + item.filterText;
+              items.push(item);
+            }
           }
 
-          items.forEach(item => item.filterText = item.insertText + ';' + item.filterText);
           return items;
         } else {
           // Bail if we are in neither full suggest mode nor partial (link target) suggest mode nor header mode
@@ -74,10 +77,12 @@ export default class MarkDownLinkCompletionItemProvider implements CompletionIte
 
       items.push(this.item(CompletionItemKind.File, file.fsPath, null, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
       if (extname(file.fsPath).toUpperCase() === '.MD' && this.allowSuggestionsForHeaders) {
-        const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', file)) as SymbolInformation[];
-        const headers = symbols.filter(symbol => symbol.kind === SymbolKind.String); // VS Code API detected headers
-        for (const header of headers) {
-          items.push(this.item(CompletionItemKind.Reference, file.fsPath, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
+        const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', file)) as SymbolInformation[] | undefined;
+        if (symbols !== undefined) {
+          const headers = symbols.filter(symbol => symbol.kind === SymbolKind.String); // VS Code API detected headers
+          for (const header of headers) {
+            items.push(this.item(CompletionItemKind.Reference, file.fsPath, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
+          }
         }
       }
     }

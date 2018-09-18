@@ -25,9 +25,12 @@ export default class SpikeCompletionItemProvider implements CompletionItemProvid
     if (fragment !== null) {
       console.log('Suggest headers', JSON.stringify(path));
       const uri = path === null ? document.uri : undefined as any; // TODO
-      const symbols = await commands.executeCommand('vscode.executeWorkspaceSymbolProvider', '') as SymbolInformation[];
-      const headers = symbols.filter(symbol => symbol.location.uri === uri && symbol.kind === SymbolKind.String);
-      console.log(headers);
+      const symbols = await commands.executeCommand('vscode.executeWorkspaceSymbolProvider', '') as SymbolInformation[] | undefined;
+      if (symbols !== undefined) {
+        const headers = symbols.filter(symbol => symbol.location.uri === uri && symbol.kind === SymbolKind.String);
+        console.log(headers);
+      }
+
       return undefined as any as CompletionItem[]; // TODO
     }
 
@@ -56,10 +59,12 @@ export default class SpikeCompletionItemProvider implements CompletionItemProvid
     for (const file of files) {
       items.push(this.makeFileCompletionItem(file.path, documentDirectoryPath));
       if (extname(file.path).toUpperCase() === '.MD') {
-        const symbols = await commands.executeCommand('vscode.executeWorkspaceSymbolProvider', '') as SymbolInformation[];
-        const headers = symbols.filter(symbol => symbol.location.uri === file && symbol.kind === SymbolKind.String);
-        for (const header of headers) {
-          items.push(new CompletionItem(file + '#' + header.name, CompletionItemKind.File));
+        const symbols = await commands.executeCommand('vscode.executeWorkspaceSymbolProvider', '') as SymbolInformation[] | undefined;
+        if (symbols !== undefined) {
+          const headers = symbols.filter(symbol => symbol.location.uri === file && symbol.kind === SymbolKind.String);
+          for (const header of headers) {
+            items.push(new CompletionItem(file + '#' + header.name, CompletionItemKind.File));
+          }
         }
       }
     }

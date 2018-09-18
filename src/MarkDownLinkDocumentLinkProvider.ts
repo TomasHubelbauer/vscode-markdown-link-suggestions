@@ -3,7 +3,11 @@ import resolvePath from "./resolvePath";
 
 export default class MarkDownLinkDocumentLinkProvider implements DocumentLinkProvider {
   public async provideDocumentLinks(document: TextDocument, _token: CancellationToken) {
-    const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', document.uri)) as SymbolInformation[];
+    const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', document.uri)) as SymbolInformation[] | undefined;
+    if (symbols === undefined) {
+      return [];
+    }
+
     const links: DocumentLink[] = [];
     for (const { kind, name, location: { range: { start, end } } } of symbols) {
       if (kind !== SymbolKind.Package || !name.startsWith('[') || !name.endsWith(')')) {

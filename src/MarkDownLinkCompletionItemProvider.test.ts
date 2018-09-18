@@ -28,8 +28,9 @@ test('CompletionItemProvider headers', async () => {
     const textEditor = await window.showTextDocument(textDocument);
     await textEditor.edit(editBuilder => editBuilder.insert(textDocument.lineAt(textDocument.lineCount - 1).rangeIncludingLineBreak.end, '\n' + '[](#'));
 
-    const { items } = await commands.executeCommand('vscode.executeCompletionItemProvider', textDocument.uri, textDocument.lineAt(textDocument.lineCount - 1).range.end) as CompletionList;
-    ok(items);
+    const list = await commands.executeCommand('vscode.executeCompletionItemProvider', textDocument.uri, textDocument.lineAt(textDocument.lineCount - 1).range.end) as CompletionList | undefined;
+    ok(list);
+    const items = list!.items;
     equal(items.length, 3);
 
     // Sort items by sort text because by default the order is based on file system enumeration which is not portable
@@ -101,9 +102,10 @@ test('CompletionItemProvider full & partial', async () => {
       const textEditor = await window.showTextDocument(textDocument);
       await textEditor.edit(editBuilder => editBuilder.insert(textDocument.lineAt(textDocument.lineCount - 1).rangeIncludingLineBreak.end, '\n' + (fullMode ? '[' : '[link](')));
 
-      const list = await commands.executeCommand('vscode.executeCompletionItemProvider', textDocument.uri, textDocument.lineAt(textDocument.lineCount - 1).range.end) as CompletionList;
+      const list = await commands.executeCommand('vscode.executeCompletionItemProvider', textDocument.uri, textDocument.lineAt(textDocument.lineCount - 1).range.end) as CompletionList | undefined;
+      ok(list);
       const bannedExtensions = ['.JS', '.MAP'];
-      const items = list.items.filter(item => !bannedExtensions.includes(extname(item.documentation! as string).toUpperCase()));
+      const items = list!.items.filter(item => !bannedExtensions.includes(extname(item.documentation! as string).toUpperCase()));
 
       ok(items);
       equal(items.length, 15);

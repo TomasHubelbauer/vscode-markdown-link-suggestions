@@ -24,7 +24,9 @@ test('DocumentLinkProvider', async () => {
     const textDocument = await workspace.openTextDocument(readmeMdFilePath);
     await commands.executeCommand('workbench.action.files.revert', textDocument.uri); // Reload from disk
     await window.showTextDocument(textDocument);
-    const links = ((await commands.executeCommand('vscode.executeLinkProvider', textDocument.uri)) as DocumentLink[]).filter(link => link.target!.scheme === 'file');
+    let links = (await commands.executeCommand('vscode.executeLinkProvider', textDocument.uri)) as DocumentLink[];
+    ok(links); // Can be `undefined`
+    links = links.filter(link => link.target!.scheme === 'file');
     equal(links.length, 4);
     ok(links[0].range.isEqual(new Range(1, 1, 1, 5)));
     equal(normalize(links[0].target!.fsPath).toUpperCase(), normalize(readmeMdFilePath).toUpperCase());
