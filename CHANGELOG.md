@@ -4,6 +4,10 @@
 
 - Fix a problem with the link path diagnostics where headers in other files would be searched for in the the file with the link
 
+### Thank You
+
+- [@borekb](https://github.com/borekb): [#9](https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/9)
+
 ## `12.0.1` (2018-09-19)
 
 - Fix attempting to index all files for diagnostics where we are only interested in MarkDown files and monitor errors from `openTextDocument`
