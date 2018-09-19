@@ -1,5 +1,13 @@
 # Change Log
 
+## `12.0.3` (2018-09-19)
+
+- Respect `.gitignore` when looking up files to suggest as well as MarkDown files to diagnose links in
+
+### Thank You
+
+- [@borekb](https://github.com/borekb): [#10](https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/10)
+
 ## `12.0.2` (2018-09-19)
 
 - Fix a problem with the link path diagnostics where headers in other files would be searched for in the the file with the link

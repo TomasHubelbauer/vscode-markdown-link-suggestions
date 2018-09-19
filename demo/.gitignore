@@ -1,0 +1,2 @@
+ignored/*.md
+!ignored/README.md

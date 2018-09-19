@@ -1,7 +1,7 @@
-import { CompletionItemProvider, TextDocument, Position, CancellationToken, CompletionContext, Range, CompletionItem, commands, SymbolInformation, SymbolKind, CompletionItemKind, TextEdit, Uri } from "vscode";
+import { CompletionItemProvider, TextDocument, Position, CancellationToken, CompletionContext, Range, CompletionItem, commands, SymbolInformation, SymbolKind, CompletionItemKind, TextEdit } from "vscode";
 import { dirname, extname, basename, relative, normalize, posix, win32 } from "path";
 import anchorize from "./anchorize";
-import getNonExcludedFiles from "./getNonExcludedFiles";
+import findNonIgnoredFiles from "./findNonIgnoredFiles";
 import applicationInsights from './telemetry';
 
 export default class MarkDownLinkCompletionItemProvider implements CompletionItemProvider {
@@ -86,16 +86,16 @@ export default class MarkDownLinkCompletionItemProvider implements CompletionIte
         }
       }
 
-      const files = await getNonExcludedFiles();
+      const files = await findNonIgnoredFiles('**/*');
       for (const file of files) {
-        items.push(this.item(CompletionItemKind.File, file, null, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
-        if (extname(file).toUpperCase() === '.MD' && this.allowSuggestionsForHeaders) {
+        items.push(this.item(CompletionItemKind.File, file.fsPath, null, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
+        if (extname(file.fsPath).toUpperCase() === '.MD' && this.allowSuggestionsForHeaders) {
           try {
-            const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', Uri.file(file))) as SymbolInformation[] | undefined;
+            const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', file)) as SymbolInformation[] | undefined;
             if (symbols !== undefined) {
               const headers = symbols.filter(symbol => symbol.kind === SymbolKind.String); // VS Code API detected headers
               for (const header of headers) {
-                items.push(this.item(CompletionItemKind.Reference, file, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
+                items.push(this.item(CompletionItemKind.Reference, file.fsPath, header, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
               }
             }
           } catch (error) {
@@ -110,7 +110,7 @@ export default class MarkDownLinkCompletionItemProvider implements CompletionIte
       }
 
       const directories = files.reduce((directoryPaths, filePath) => {
-        const directoryPath = dirname(filePath);
+        const directoryPath = dirname(filePath.fsPath);
         if (!directoryPaths.includes(directoryPath)) {
           directoryPaths.push(directoryPath);
         }

@@ -1,13 +1,12 @@
 import MarkDownLinkDocumentSymbolProvider from './MarkDownLinkDocumentSymbolProvider';
 import MarkDownLinkDocumentLinkProvider from './MarkDownLinkDocumentLinkProvider';
 import MarkDownLinkCompletionItemProvider from './MarkDownLinkCompletionItemProvider';
-import getNonExcludedFiles from './getNonExcludedFiles';
+import getNonExcludedFiles from './findNonIgnoredFiles';
 import provideDiagnostics from './provideDiagnostics';
 import MarkDownLinkCodeActionProvider from './MarkDownLinkCodeActionProvider';
 import { ExtensionContext, workspace, languages, commands, Uri } from 'vscode';
 import { writeFile } from 'fs-extra';
 import applicationInsights from './telemetry';
-import { extname } from 'path';
 
 export async function activate(context: ExtensionContext) {
     context.subscriptions.push(applicationInsights);
@@ -69,15 +68,11 @@ export async function activate(context: ExtensionContext) {
         }
     });
 
-    const files = await getNonExcludedFiles();
+    const files = await getNonExcludedFiles('**/*.md');
     for (const file of files) {
-        if (extname(file).toUpperCase() !== '.MD') {
-            continue;
-        }
-
         try {
             const textDocument = await workspace.openTextDocument(file);
-            diagnosticCollection.set(Uri.file(file), await provideDiagnostics(textDocument));
+            diagnosticCollection.set(file, await provideDiagnostics(textDocument));
         } catch (error) {
             applicationInsights.sendTelemetryEvent('error-openTextDocument');
         }

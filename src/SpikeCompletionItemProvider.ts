@@ -1,8 +1,8 @@
-import { CompletionItemProvider, TextDocument, Position, CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, commands, SymbolInformation, SymbolKind, Uri } from "vscode";
+import { CompletionItemProvider, TextDocument, Position, CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, commands, SymbolInformation, SymbolKind } from "vscode";
 import LinkContextRecognizer from "./LinkContextRecognizer.g";
 import { dirname, extname, basename, relative, normalize, win32, posix } from "path";
 import anchorize from "./anchorize";
-import getNonExcludedFiles from "./getNonExcludedFiles";
+import getNonExcludedFiles from "./findNonIgnoredFiles";
 
 export default class SpikeCompletionItemProvider implements CompletionItemProvider {
   // TODO: Revisit these
@@ -55,13 +55,13 @@ export default class SpikeCompletionItemProvider implements CompletionItemProvid
 
     const documentDirectoryPath = dirname(document.uri.fsPath);
 
-    const files = await getNonExcludedFiles();
+    const files = await getNonExcludedFiles('**/*');
     for (const file of files) {
-      items.push(this.makeFileCompletionItem(file, documentDirectoryPath));
-      if (extname(file).toUpperCase() === '.MD') {
+      items.push(this.makeFileCompletionItem(file.fsPath, documentDirectoryPath));
+      if (extname(file.fsPath).toUpperCase() === '.MD') {
         const symbols = await commands.executeCommand('vscode.executeWorkspaceSymbolProvider', '') as SymbolInformation[] | undefined;
         if (symbols !== undefined) {
-          const headers = symbols.filter(symbol => symbol.location.uri === Uri.file(file) && symbol.kind === SymbolKind.String);
+          const headers = symbols.filter(symbol => symbol.location.uri === file && symbol.kind === SymbolKind.String);
           for (const header of headers) {
             items.push(new CompletionItem(file + '#' + header.name, CompletionItemKind.File));
           }
@@ -70,7 +70,7 @@ export default class SpikeCompletionItemProvider implements CompletionItemProvid
     }
 
     const directories = files.reduce((directoryPaths, filePath) => {
-      const directoryPath = dirname(filePath);
+      const directoryPath = dirname(filePath.fsPath);
       if (!directoryPaths.includes(directoryPath)) {
         directoryPaths.push(directoryPath);
       }
