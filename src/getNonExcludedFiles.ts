@@ -1,4 +1,4 @@
-import { workspace, RelativePattern, Uri } from "vscode";
+import { workspace, RelativePattern } from "vscode";
 
 export default async function getNonExcludedFiles() {
   // TODO: https://github.com/TomasHubelbauer/vscode-extension-findFilesWithExcludes
@@ -9,10 +9,11 @@ export default async function getNonExcludedFiles() {
   for (const glob of globs) {
     // TODO: https://github.com/Microsoft/vscode/issues/47645
     for (const file of await workspace.findFiles('**/*.*', glob)) {
-      occurences.set(file.path, (occurences.get(file.path) || 0) + 1);
+      // Use `fsPath` to not get the leading slash
+      occurences.set(file.fsPath, (occurences.get(file.fsPath) || 0) + 1);
     }
   }
 
   // Accept only files not excluded in any of the globs
-  return [...occurences.keys()].filter(path => occurences.get(path) === globs.length).map(file => Uri.file(file));
+  return [...occurences.keys()].filter(path => occurences.get(path) === globs.length);
 }

@@ -7,6 +7,7 @@ import MarkDownLinkCodeActionProvider from './MarkDownLinkCodeActionProvider';
 import { ExtensionContext, workspace, languages, commands, Uri } from 'vscode';
 import { writeFile } from 'fs-extra';
 import applicationInsights from './telemetry';
+import { extname } from 'path';
 
 export async function activate(context: ExtensionContext) {
     context.subscriptions.push(applicationInsights);
@@ -70,11 +71,15 @@ export async function activate(context: ExtensionContext) {
 
     const files = await getNonExcludedFiles();
     for (const file of files) {
+        if (extname(file).toUpperCase() !== '.MD') {
+            continue;
+        }
+
         try {
             const textDocument = await workspace.openTextDocument(file);
-            diagnosticCollection.set(file, await provideDiagnostics(textDocument));
+            diagnosticCollection.set(Uri.file(file), await provideDiagnostics(textDocument));
         } catch (error) {
-            // Ignore an attempt to open a binary file
+            applicationInsights.sendTelemetryEvent('error-openTextDocument');
         }
     }
 }

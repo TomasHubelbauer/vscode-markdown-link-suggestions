@@ -1,4 +1,4 @@
-import { CompletionItemProvider, TextDocument, Position, CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, commands, SymbolInformation, SymbolKind } from "vscode";
+import { CompletionItemProvider, TextDocument, Position, CancellationToken, CompletionContext, CompletionItem, CompletionItemKind, commands, SymbolInformation, SymbolKind, Uri } from "vscode";
 import LinkContextRecognizer from "./LinkContextRecognizer.g";
 import { dirname, extname, basename, relative, normalize, win32, posix } from "path";
 import anchorize from "./anchorize";
@@ -57,11 +57,11 @@ export default class SpikeCompletionItemProvider implements CompletionItemProvid
 
     const files = await getNonExcludedFiles();
     for (const file of files) {
-      items.push(this.makeFileCompletionItem(file.path, documentDirectoryPath));
-      if (extname(file.path).toUpperCase() === '.MD') {
+      items.push(this.makeFileCompletionItem(file, documentDirectoryPath));
+      if (extname(file).toUpperCase() === '.MD') {
         const symbols = await commands.executeCommand('vscode.executeWorkspaceSymbolProvider', '') as SymbolInformation[] | undefined;
         if (symbols !== undefined) {
-          const headers = symbols.filter(symbol => symbol.location.uri === file && symbol.kind === SymbolKind.String);
+          const headers = symbols.filter(symbol => symbol.location.uri === Uri.file(file) && symbol.kind === SymbolKind.String);
           for (const header of headers) {
             items.push(new CompletionItem(file + '#' + header.name, CompletionItemKind.File));
           }
@@ -70,7 +70,7 @@ export default class SpikeCompletionItemProvider implements CompletionItemProvid
     }
 
     const directories = files.reduce((directoryPaths, filePath) => {
-      const directoryPath = dirname(filePath.path);
+      const directoryPath = dirname(filePath);
       if (!directoryPaths.includes(directoryPath)) {
         directoryPaths.push(directoryPath);
       }
