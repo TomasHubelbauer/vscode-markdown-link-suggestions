@@ -74,4 +74,11 @@ After initial testing, the event scope will be reduced to just suggestion errors
 
 The extension respects the VS Code setting and will not send telemetry events against your wishes.
 
+**If you want concerns about the scope of the data collected:**
+
 [MarkDown-Link-Suggestions - Events](https://portal.azure.com/#@tomashubelbauerlive.onmicrosoft.com/resource/subscriptions/808a4574-3b06-4368-ab54-bb29b1da0974/resourcegroups/VSCode-Extensions/providers/microsoft.insights/components/MarkDown-Link-Suggestions/events)
+
+Unfortunately, it doesn't appear as though Application Insights can be made public for reading,
+but I will be happy to invite any concerned users to the Azure Application Insights resource
+so that you can do an informed decision about whether using this extension with telemetry
+enabled is acceptable for you or not.
