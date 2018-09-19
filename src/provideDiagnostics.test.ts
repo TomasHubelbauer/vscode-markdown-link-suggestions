@@ -6,9 +6,12 @@ import { equal, ok, deepEqual } from "assert";
 
 const workspaceDirectoryPath = workspace.workspaceFolders![0].uri.fsPath;
 const readmeMdFilePath = join(workspaceDirectoryPath, 'README.md');
+const readme2MdFilePath = join(workspaceDirectoryPath, 'README2.md');
 
 test('provideDiagnostics', async () => {
   try {
+    ok(workspace.workspaceFolders);
+
     await writeFile(readmeMdFilePath, `
 [exists](README.md)
 [exists but bad header](README.md#nope)
@@ -24,6 +27,16 @@ https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/5
 
 [](#implicit-bad)
 [](README.md#explicit-bad)
+[](README2.md#outward-bad)
+[](README2.md#working)
+`);
+
+    await writeFile(readme2MdFilePath, `
+# Hello
+
+## Broken (Broken)
+
+## Working
 `);
 
     const textDocument = await workspace.openTextDocument(readmeMdFilePath);
@@ -31,29 +44,34 @@ https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/5
     const textEditor = await window.showTextDocument(textDocument);
 
     let diagnostics = await provideDiagnostics(textDocument);
-    equal(diagnostics.length, 4);
+    equal(diagnostics.length, 5);
 
     equal(diagnostics[0].severity, DiagnosticSeverity.Error);
-    ok(diagnostics[0].message.startsWith('The header nope doesn\'t exist in file'));
+    ok(diagnostics[0].message, 'The header nope doesn\'t exist in file');
     deepEqual(diagnostics[0].range, new Range(2, 34, 2, 38));
 
     equal(diagnostics[1].severity, DiagnosticSeverity.Error);
-    ok(diagnostics[1].message.startsWith('The path') && diagnostics[1].message.endsWith('doesn\'t exist on the disk.'));
+    equal(diagnostics[1].message, 'The path DO-NOT-README.md doesn\'t exist on the disk.');
     deepEqual(diagnostics[1].range, new Range(3, 17, 3, 33));
 
     equal(diagnostics[2].severity, DiagnosticSeverity.Error);
-    ok(diagnostics[2].message.startsWith('The header implicit-bad doesn\'t exist in file'));
+    equal(diagnostics[2].message, 'The header implicit-bad doesn\'t exist in file README.md.');
     deepEqual(diagnostics[2].range, new Range(13, 4, 13, 16));
 
     equal(diagnostics[3].severity, DiagnosticSeverity.Error);
-    ok(diagnostics[3].message.startsWith('The header explicit-bad doesn\'t exist in file'));
+    equal(diagnostics[3].message, 'The header explicit-bad doesn\'t exist in file README.md.');
     deepEqual(diagnostics[3].range, new Range(14, 13, 14, 25));
+
+    equal(diagnostics[4].severity, DiagnosticSeverity.Error);
+    equal(diagnostics[4].message, 'The header outward-bad doesn\'t exist in file README2.md.');
+    deepEqual(diagnostics[4].range, new Range(15, 14, 15, 25));
 
     await textEditor.edit(editBuilder => {
       editBuilder.replace(new Range(2, 34, 2, 38), 'working');
       editBuilder.replace(new Range(13, 4, 13, 16), 'working');
       editBuilder.replace(new Range(14, 13, 14, 25), 'working');
       editBuilder.delete(new Range(3, 17, 3, 24));
+      editBuilder.delete(new Range(15, 0, 15, 26));
     });
 
     await textDocument.save();
@@ -63,5 +81,6 @@ https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/5
   } finally {
     await commands.executeCommand('workbench.action.closeActiveEditor');
     await remove(readmeMdFilePath);
+    await remove(readme2MdFilePath);
   }
 });

@@ -1,5 +1,9 @@
 # Change Log
 
+## `12.0.2` (2018-09-19)
+
+- Fix a problem with the link path diagnostics where headers in other files would be searched for in the the file with the link
+
 ## `12.0.1` (2018-09-19)
 
 - Fix attempting to index all files for diagnostics where we are only interested in MarkDown files and monitor errors from `openTextDocument`
