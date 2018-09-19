@@ -1,5 +1,9 @@
 # Change Log
 
+## `12.0.1` (2018-09-19)
+
+- Fix attempting to index all files for diagnostics where we are only interested in MarkDown files and monitor errors from `openTextDocument`
+
 ## `12.0.0` (2018-09-18)
 
 Introduce telemetry in preparation to the upcoming release of the link context recognizer rewrite.
