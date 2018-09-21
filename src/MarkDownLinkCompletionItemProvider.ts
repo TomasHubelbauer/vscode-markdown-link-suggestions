@@ -17,11 +17,7 @@ export default class MarkDownLinkCompletionItemProvider implements CompletionIte
 
   public async provideCompletionItems(document: TextDocument, position: Position, _token: CancellationToken, context: CompletionContext) {
     try {
-      try {
-        applicationInsights.sendTelemetryEvent('suggest');
-      } catch {
-        // Defend against AI not working for the first AI release
-      }
+      applicationInsights.sendTelemetryEvent('suggest');
 
       const character = context.triggerCharacter || /* Ctrl + Space */ document.getText(new Range(position.translate(0, -1), position));
 
@@ -66,21 +62,11 @@ export default class MarkDownLinkCompletionItemProvider implements CompletionIte
               }
             }
 
-            try {
-              applicationInsights.sendTelemetryEvent('suggest-headers');
-            } catch {
-              // Defend against AI not working for the first AI release
-            }
-
+            applicationInsights.sendTelemetryEvent('suggest-headers');
             return items;
           } else {
             // Bail if we are in neither full suggest mode nor partial (link target) suggest mode nor header mode
-            try {
-              applicationInsights.sendTelemetryEvent('suggest-invalid');
-            } catch {
-              // Defend against AI not working for the first AI release
-            }
-
+            applicationInsights.sendTelemetryEvent('suggest-invalid');
             return;
           }
         }
@@ -100,11 +86,7 @@ export default class MarkDownLinkCompletionItemProvider implements CompletionIte
             }
           } catch (error) {
             // TODO: Figure out what causes the *Error: Illegal argument: resource* error
-            try {
-              applicationInsights.sendTelemetryEvent('suggest-resource', { error: error.toString() });
-            } catch {
-              // Defend against AI not working for the first AI release
-            }
+            applicationInsights.sendTelemetryEvent('suggest-resource', { error: error.toString() });
           }
         }
       }
@@ -122,18 +104,10 @@ export default class MarkDownLinkCompletionItemProvider implements CompletionIte
         items.push(this.item(CompletionItemKind.Folder, directory, null, documentDirectoryPath, fullSuggestMode, fullSuggestModeBraceCompleted, partialSuggestModeBraceCompleted, braceCompletionRange));
       }
 
-      try {
-        applicationInsights.sendTelemetryEvent('suggest-full-partial');
-      } catch {
-        // Defend against AI not working for the first AI release
-      }
+      applicationInsights.sendTelemetryEvent('suggest-full-partial');
       return items;
     } catch (error) {
-      try {
-        applicationInsights.sendTelemetryEvent('suggest-failure', { error: error.toString() });
-      } catch {
-        // Defend against AI not working for the first AI release
-      }
+      applicationInsights.sendTelemetryEvent('suggest-failure', { error: error.toString() });
     }
 
     return [];
