@@ -29,6 +29,7 @@ https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/5
 [](README.md#explicit-bad)
 [](README2.md#outward-bad)
 [](README2.md#working)
+[](README2.md#a-header-with-inline-code-and-formatting)
 `);
 
     await writeFile(readme2MdFilePath, `
@@ -37,6 +38,8 @@ https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/5
 ## Broken (Broken)
 
 ## Working
+
+## A header with \`inline code\` and **formatting**
 `);
 
     const textDocument = await workspace.openTextDocument(readmeMdFilePath);
