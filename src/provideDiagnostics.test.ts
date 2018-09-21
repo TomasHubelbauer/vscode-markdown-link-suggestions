@@ -7,6 +7,8 @@ import { equal, ok, deepEqual } from "assert";
 const workspaceDirectoryPath = workspace.workspaceFolders![0].uri.fsPath;
 const readmeMdFilePath = join(workspaceDirectoryPath, 'README.md');
 const readme2MdFilePath = join(workspaceDirectoryPath, 'README2.md');
+const dotGitIgnoreFilePath = join(workspaceDirectoryPath, '.gitignore');
+const ignoredMdFilePath = join(workspaceDirectoryPath, 'ignored.md');
 
 test('provideDiagnostics', async () => {
   try {
@@ -42,6 +44,16 @@ https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/5
 ## A header with \`inline code\` and **formatting**
 `);
 
+    await writeFile(dotGitIgnoreFilePath, `
+ignored.*
+`);
+
+    await writeFile(ignoredMdFilePath, `
+This file is ignored!
+
+[This link](broken.md) won't fail the diagnosis!
+`);
+
     const textDocument = await workspace.openTextDocument(readmeMdFilePath);
     await commands.executeCommand('workbench.action.files.revert', textDocument.uri); // Reload from disk
     const textEditor = await window.showTextDocument(textDocument);
@@ -50,7 +62,7 @@ https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/5
     equal(diagnostics.length, 5);
 
     equal(diagnostics[0].severity, DiagnosticSeverity.Error);
-    ok(diagnostics[0].message, 'The header nope doesn\'t exist in file');
+    equal(diagnostics[0].message, 'The header nope doesn\'t exist in file README.md.');
     deepEqual(diagnostics[0].range, new Range(2, 34, 2, 38));
 
     equal(diagnostics[1].severity, DiagnosticSeverity.Error);
@@ -85,5 +97,7 @@ https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions/issues/5
     await commands.executeCommand('workbench.action.closeActiveEditor');
     await remove(readmeMdFilePath);
     await remove(readme2MdFilePath);
+    await remove(dotGitIgnoreFilePath);
+    await remove(ignoredMdFilePath);
   }
 });
