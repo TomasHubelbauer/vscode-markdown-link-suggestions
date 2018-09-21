@@ -10,7 +10,6 @@ import applicationInsights from './telemetry';
 
 export async function activate(context: ExtensionContext) {
     context.subscriptions.push(applicationInsights);
-    applicationInsights.sendTelemetryEvent('activate');
 
     // Ignore files opened without a folder.
     if (workspace.workspaceFolders === undefined) {
@@ -80,6 +79,5 @@ export async function activate(context: ExtensionContext) {
 }
 
 export function deactivate() {
-    applicationInsights.sendTelemetryEvent('deactivate');
     applicationInsights.dispose();
 }
