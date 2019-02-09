@@ -1,4 +1,4 @@
-import { TextDocument, commands, SymbolInformation, SymbolKind, Uri, Range, Diagnostic, DiagnosticSeverity, workspace } from "vscode";
+import { TextDocument, commands, SymbolKind, Uri, Diagnostic, DiagnosticSeverity, workspace, DocumentSymbol } from "vscode";
 import resolvePath from "./resolvePath";
 import { pathExists, stat } from "fs-extra";
 import anchorize from "./anchorize";
@@ -6,17 +6,18 @@ import applicationInsights from './telemetry';
 
 export default async function provideDiagnostics(document: TextDocument) {
   const diagnostics: Diagnostic[] = [];
-  const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', document.uri)) as SymbolInformation[] | undefined;
+  const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', document.uri)) as DocumentSymbol[] | undefined;
   if (symbols === undefined) {
     return diagnostics;
   }
 
-  for (const { kind, name, location } of symbols) {
-    if (kind !== SymbolKind.Package || !name.startsWith('[') || !name.endsWith(')')) {
+  for (const { name, kind, children } of symbols) {
+    // Filter down only link symbols - string symbol with exactly one other string symbol child
+    if (kind !== SymbolKind.String || children.length !== 1 || children[0].kind !== SymbolKind.String || children[0].detail !== name) {
       continue;
     }
 
-    const [, linkPath] = /]\((.*)\)/.exec(name)!;
+    const linkPath = children[0].name;
     const { scheme, path, fragment } = Uri.parse(linkPath);
     if (scheme && scheme !== 'file') {
       continue;
@@ -24,8 +25,8 @@ export default async function provideDiagnostics(document: TextDocument) {
 
     const absolutePath = resolvePath(document, path);
     const relativePath = workspace.asRelativePath(absolutePath);
+    const range = children[0].selectionRange;
     if (!await pathExists(absolutePath)) {
-      const range = new Range(location.range.end.translate(0, 0 - 1 - path.length), location.range.end.translate(0, -1));
       const diagnostic = new Diagnostic(range, `The path ${relativePath} doesn't exist on the disk.`, DiagnosticSeverity.Error);
       diagnostic.source = 'MarkDown Link Suggestions';
       // TODO: Similar enough path exists? Use `code` and suggest rewriting.
@@ -35,18 +36,19 @@ export default async function provideDiagnostics(document: TextDocument) {
     }
 
     if (fragment !== '' && (await stat(absolutePath)).isFile()) {
-      let fileSymbols: SymbolInformation[];
+      let symbols: DocumentSymbol[];
       try {
-        fileSymbols = ((await commands.executeCommand('vscode.executeDocumentSymbolProvider', Uri.file(absolutePath))) as SymbolInformation[] | undefined) || [];
+        symbols = ((await commands.executeCommand('vscode.executeDocumentSymbolProvider', Uri.file(absolutePath))) as DocumentSymbol[] | undefined) || [];
       } catch (error) {
         applicationInsights.sendTelemetryEvent('provideDiagnostics-executeDocumentSymbolProvider-error');
         continue;
       }
 
+      let headers = flattenStringSymbols(symbols);
+
       // Remove periods in fragment because the extension used to not remove them and thus generated fragments which are now invalid
-      const header = fileSymbols.find(symbol => symbol.kind === SymbolKind.String && anchorize(symbol.name) === anchorize(fragment));
+      const header = headers.find(symbol => symbol.kind === SymbolKind.String && anchorize(symbol.name) === anchorize(fragment));
       if (header === undefined) {
-        const range = new Range(location.range.end.translate(0, 0 - 1 - fragment.length), location.range.end.translate(0, -1));
         const diagnostic = new Diagnostic(range, `The header ${fragment} doesn't exist in file ${relativePath}.`, DiagnosticSeverity.Error);
         diagnostic.source = 'MarkDown Link Suggestions';
         // TODO: Similar enough path exists? Use `code` and `relatedInformation` and suggest rewriting.
@@ -57,4 +59,17 @@ export default async function provideDiagnostics(document: TextDocument) {
   }
 
   return diagnostics;
+}
+
+function flattenStringSymbols(symbols: DocumentSymbol[], results: DocumentSymbol[] = []) {
+  for (let symbol of symbols) {
+    if (symbol.kind !== SymbolKind.String) {
+      continue;
+    }
+
+    results.push(symbol);
+    flattenStringSymbols(symbol.children, results);
+  }
+
+  return results;
 }
