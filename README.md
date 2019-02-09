@@ -57,7 +57,8 @@ Deploying is not currently done on CI, instead it is manual:
 
 ## Contributing
 
-See [the todoes](todo).
+- See [the todoes](todo)
+- [ ] Fix tests after changing the document symbol provider and the diagnostics provider function
 
 ## Monitoring
 
