@@ -1,9 +1,9 @@
-import { DocumentSymbolProvider, TextDocument, CancellationToken, SymbolInformation, SymbolKind, Location, Range } from "vscode";
+import { DocumentSymbolProvider, TextDocument, CancellationToken, SymbolKind, Range, DocumentSymbol } from "vscode";
 
 export default class MarkDownLinkDocumentSymbolProvider implements DocumentSymbolProvider {
   public provideDocumentSymbols(document: TextDocument, _token: CancellationToken) {
     let isInCodeBlock = false;
-    const symbols: SymbolInformation[] = [];
+    const symbols: DocumentSymbol[] = [];
     for (let index = 0; index < document.lineCount; index++) {
       const line = document.lineAt(index);
 
@@ -35,7 +35,15 @@ export default class MarkDownLinkDocumentSymbolProvider implements DocumentSymbo
           continue;
         }
 
-        symbols.push(new SymbolInformation(match[0], SymbolKind.Package, '', new Location(document.uri, new Range(index, match.index, index, match.index + 1 + text.length + 2 + path.length + 1))));
+        const textRange = new Range(index, match.index, index, match.index + 1 + text.length + 1);
+        const textSelectionRange = new Range(index, match.index + 1, index, match.index + 1 + text.length);
+        const textSymbol = new DocumentSymbol(text, 'MarkDown Link', SymbolKind.String, textRange, textSelectionRange);
+        symbols.push(textSymbol);
+
+        const pathRange = new Range(index, match.index + 1 + text.length + 1, index, match.index + 1 + text.length + 1 + path.length + 1);
+        const pathSelectionRange = new Range(index, match.index + 1 + text.length + 2, index, match.index + 1 + text.length + 1 + path.length);
+        const pathSymbol = new DocumentSymbol(path, text, SymbolKind.String, pathRange, pathSelectionRange);
+        textSymbol.children.push(pathSymbol);
       }
     }
 

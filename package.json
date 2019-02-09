@@ -21,7 +21,7 @@
         "url": "https://github.com/TomasHubelbauer/vscode-markdown-link-suggestions.git"
     },
     "engines": {
-        "vscode": "^1.29.0"
+        "vscode": "^1.31.0"
     },
     "activationEvents": [
         "workspaceContains:**/*.md",
