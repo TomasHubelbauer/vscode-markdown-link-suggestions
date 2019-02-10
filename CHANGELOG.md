@@ -1,5 +1,11 @@
 # Change Log
 
+## `13.0.0` (2019-02-10)
+
+Address VS Code API changes where document symbol provider now returns a hierarchy of headers, not a list.
+
+This fixes a lot of issues with incorrect reporting of missing headers etc.
+
 ## `12.0.3` (2018-09-19)
 
 - Respect `.gitignore` when looking up files to suggest as well as MarkDown files to diagnose links in
