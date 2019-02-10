@@ -4,6 +4,7 @@ import { pathExists, stat } from "fs-extra";
 import anchorize from "./anchorize";
 import applicationInsights from './telemetry';
 import isLinkDocumentSymbol from "./isLinkDocumentSymbol";
+import extractHeaders from "./extractHeaders";
 
 export default async function provideDiagnostics(document: TextDocument) {
   const diagnostics: Diagnostic[] = [];
@@ -37,7 +38,7 @@ export default async function provideDiagnostics(document: TextDocument) {
     } else if (fragment !== '' && (await stat(absolutePath)).isFile()) {
       let headers: DocumentSymbol[];
       try {
-        headers = flattenStringSymbols((await commands.executeCommand('vscode.executeDocumentSymbolProvider', Uri.file(absolutePath))) as DocumentSymbol[] | undefined || []);
+        headers = extractHeaders((await commands.executeCommand('vscode.executeDocumentSymbolProvider', Uri.file(absolutePath))) as DocumentSymbol[] | undefined || []);
       } catch (error) {
         applicationInsights.sendTelemetryEvent('provideDiagnostics-executeDocumentSymbolProvider-error');
         continue;
@@ -56,18 +57,4 @@ export default async function provideDiagnostics(document: TextDocument) {
   }
 
   return diagnostics;
-}
-
-function flattenStringSymbols(symbols: DocumentSymbol[], results: DocumentSymbol[] = []) {
-  for (let symbol of symbols) {
-    // Ignore link symbols so that we don't get false positives where "# header" and "[#link path]" would look the same (string with "# content")
-    if (isLinkDocumentSymbol(symbol) || symbol.kind !== SymbolKind.String) {
-      continue;
-    }
-
-    results.push(symbol);
-    flattenStringSymbols(symbol.children, results);
-  }
-
-  return results;
 }

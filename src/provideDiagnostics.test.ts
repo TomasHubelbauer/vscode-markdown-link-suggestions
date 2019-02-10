@@ -59,10 +59,6 @@ This file is ignored!
     const textEditor = await window.showTextDocument(textDocument);
 
     let diagnostics = await provideDiagnostics(textDocument);
-    for (let diagnostic of diagnostics) {
-      console.log(diagnostic);
-    }
-
     equal(diagnostics.length, 5);
 
     equal(diagnostics[0].severity, DiagnosticSeverity.Error);
