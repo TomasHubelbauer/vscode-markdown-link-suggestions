@@ -31,6 +31,10 @@ test('CompletionItemProvider headers', async () => {
     const list = await commands.executeCommand('vscode.executeCompletionItemProvider', textDocument.uri, textDocument.lineAt(textDocument.lineCount - 1).range.end) as CompletionList | undefined;
     ok(list);
     const items = list!.items;
+    for (let item of items) {
+      console.log(item);
+    }
+    
     equal(items.length, 3);
 
     // Sort items by sort text because by default the order is based on file system enumeration which is not portable
