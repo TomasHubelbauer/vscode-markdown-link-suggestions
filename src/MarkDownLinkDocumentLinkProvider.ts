@@ -1,26 +1,27 @@
-import { DocumentLinkProvider, TextDocument, CancellationToken, commands, SymbolInformation, DocumentLink, Uri, SymbolKind, Range } from "vscode";
+import { DocumentLinkProvider, TextDocument, CancellationToken, commands, DocumentLink, Uri, DocumentSymbol } from "vscode";
 import resolvePath from "./resolvePath";
+import isLinkDocumentSymbol from "./isLinkDocumentSymbol";
 
 export default class MarkDownLinkDocumentLinkProvider implements DocumentLinkProvider {
   public async provideDocumentLinks(document: TextDocument, _token: CancellationToken) {
-    const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', document.uri)) as SymbolInformation[] | undefined;
+    const symbols = (await commands.executeCommand('vscode.executeDocumentSymbolProvider', document.uri)) as DocumentSymbol[] | undefined;
     if (symbols === undefined) {
       return [];
     }
 
     const links: DocumentLink[] = [];
-    for (const { kind, name, location: { range: { start, end } } } of symbols) {
-      if (kind !== SymbolKind.Package || !name.startsWith('[') || !name.endsWith(')')) {
+    for (const symbol of symbols) {
+      if (!isLinkDocumentSymbol(symbol)) {
         continue;
       }
 
-      const [, path] = /]\((.*)\)/.exec(name)!;
+      const path = symbol.children[0].name;
       const uri = Uri.parse(path);
       if (uri.scheme && uri.scheme !== 'file') {
         continue;
       }
 
-      links.push(new DocumentLink(new Range(start.translate(0, 1), end.translate(0, 0 - 1 - path.length - 2)), Uri.file(resolvePath(document, path))));
+      links.push(new DocumentLink(symbol.children[0].selectionRange, Uri.file(resolvePath(document, path))));
     }
 
     return links;
