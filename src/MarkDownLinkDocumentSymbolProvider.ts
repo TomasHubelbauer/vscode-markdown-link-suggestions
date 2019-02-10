@@ -37,12 +37,12 @@ export default class MarkDownLinkDocumentSymbolProvider implements DocumentSymbo
 
         const textRange = new Range(index, match.index, index, match.index + 1 + text.length + 1);
         const textSelectionRange = new Range(index, match.index + 1, index, match.index + 1 + text.length);
-        const textSymbol = new DocumentSymbol(text, 'MarkDown Link', SymbolKind.String, textRange, textSelectionRange);
+        const textSymbol = new DocumentSymbol(text || '(no text)', '', SymbolKind.String, textRange, textSelectionRange);
         symbols.push(textSymbol);
 
         const pathRange = new Range(index, match.index + 1 + text.length + 1, index, match.index + 1 + text.length + 1 + path.length + 1);
         const pathSelectionRange = new Range(index, match.index + 1 + text.length + 2, index, match.index + 1 + text.length + 1 + path.length);
-        const pathSymbol = new DocumentSymbol(path, text, SymbolKind.String, pathRange, pathSelectionRange);
+        const pathSymbol = new DocumentSymbol(path || '(no path)', text || '(no text)', SymbolKind.String, pathRange, pathSelectionRange);
         textSymbol.children.push(pathSymbol);
       }
     }

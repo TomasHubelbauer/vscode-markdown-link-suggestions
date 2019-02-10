@@ -2,7 +2,7 @@ import { workspace, commands, window, DiagnosticSeverity, Range } from "vscode";
 import { join } from "path";
 import { writeFile, remove } from "fs-extra";
 import provideDiagnostics from "./provideDiagnostics";
-import { equal, ok, deepEqual } from "assert";
+import { equal, ok } from "assert";
 
 const workspaceDirectoryPath = workspace.workspaceFolders![0].uri.fsPath;
 const readmeMdFilePath = join(workspaceDirectoryPath, 'README.md');
@@ -59,27 +59,31 @@ This file is ignored!
     const textEditor = await window.showTextDocument(textDocument);
 
     let diagnostics = await provideDiagnostics(textDocument);
+    for (let diagnostic of diagnostics) {
+      console.log(diagnostic);
+    }
+
     equal(diagnostics.length, 5);
 
     equal(diagnostics[0].severity, DiagnosticSeverity.Error);
     equal(diagnostics[0].message, 'The header nope doesn\'t exist in file README.md.');
-    deepEqual(diagnostics[0].range, new Range(2, 34, 2, 38));
+    ok(diagnostics[0].range.isEqual(new Range(2, 24, 2, 37)));
 
     equal(diagnostics[1].severity, DiagnosticSeverity.Error);
     equal(diagnostics[1].message, 'The path DO-NOT-README.md doesn\'t exist on the disk.');
-    deepEqual(diagnostics[1].range, new Range(3, 17, 3, 33));
+    ok(diagnostics[1].range.isEqual(new Range(3, 17, 3, 32)));
 
     equal(diagnostics[2].severity, DiagnosticSeverity.Error);
     equal(diagnostics[2].message, 'The header implicit-bad doesn\'t exist in file README.md.');
-    deepEqual(diagnostics[2].range, new Range(13, 4, 13, 16));
+    ok(diagnostics[2].range.isEqual(new Range(13, 3, 13, 15)));
 
     equal(diagnostics[3].severity, DiagnosticSeverity.Error);
     equal(diagnostics[3].message, 'The header explicit-bad doesn\'t exist in file README.md.');
-    deepEqual(diagnostics[3].range, new Range(14, 13, 14, 25));
+    ok(diagnostics[3].range.isEqual(new Range(14, 3, 14, 24)));
 
     equal(diagnostics[4].severity, DiagnosticSeverity.Error);
     equal(diagnostics[4].message, 'The header outward-bad doesn\'t exist in file README2.md.');
-    deepEqual(diagnostics[4].range, new Range(15, 14, 15, 25));
+    ok(diagnostics[4].range.isEqual(new Range(15, 3, 15, 24)));
 
     await textEditor.edit(editBuilder => {
       editBuilder.replace(new Range(2, 34, 2, 38), 'working');

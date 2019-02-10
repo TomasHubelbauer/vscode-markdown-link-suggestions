@@ -1,6 +1,6 @@
 import { workspace, commands, window, CompletionList, CompletionItemKind } from "vscode";
 import { join, normalize, extname } from "path";
-import { writeFile } from "fs";
+import { writeFile } from "fs-extra";
 import { ok, equal } from "assert";
 import { remove, ensureDir, emptyDir } from "fs-extra";
 

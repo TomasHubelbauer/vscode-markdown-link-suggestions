@@ -6,7 +6,7 @@ import {
   createAssignment, createUnionTypeNode, createLiteralTypeNode, createIf, createContinue, createConstructor, createArrayTypeNode, createThrow, createNew, createDelete,
   createTypeReferenceNode,
 } from 'typescript';
-import { writeFileSync } from 'fs';
+import { writeFileSync } from 'fs-extra';
 import { join } from 'path';
 import { pathExistsSync, ensureDirSync } from 'fs-extra';
 
