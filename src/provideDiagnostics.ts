@@ -21,11 +21,20 @@ export default async function provideDiagnostics(document: TextDocument) {
 
     const linkPath = symbol.children[0].name;
     const { scheme, path, fragment } = Uri.parse(linkPath);
+
+    // Ignore links such as `http`, `mailto` and other non-file protocols
+    // TODO: Make sure schemes like `C` (incorrectly identified as scheme when it is drive letter)
     if (scheme && scheme !== 'file') {
       continue;
     }
 
-    const absolutePath = resolvePath(document, path);
+    let verbatimPath = path;
+    // Remove leading slash which `Uri.parse` puts there but isn't in the MarkDown
+    if (path.startsWith('/')) {
+      verbatimPath = verbatimPath.slice(1);
+    }
+
+    const absolutePath = resolvePath(document, verbatimPath);
     const relativePath = workspace.asRelativePath(absolutePath);
     const range = symbol.children[0].selectionRange;
     if (!await pathExists(absolutePath)) {
