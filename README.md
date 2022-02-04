@@ -3,6 +3,17 @@
 [![](https://vsmarketplacebadge.apphb.com/installs-short/TomasHubelbauer.vscode-markdown-link-suggestions.svg)](https://marketplace.visualstudio.com/items?itemName=TomasHubelbauer.vscode-markdown-link-suggestions)
 [![](https://vsmarketplacebadge.apphb.com/downloads-short/TomasHubelbauer.vscode-markdown-link-suggestions.svg)](https://marketplace.visualstudio.com/items?itemName=TomasHubelbauer.vscode-markdown-link-suggestions)
 
+This extension is made obsolete by the VS Code native feature called
+"Markdown path IntelliSense":
+
+https://code.visualstudio.com/updates/v1_64#_markdown-path-intellisense
+
+Please prefer this feature over an extension. Let me know if my extension offers
+anything over this native feature and I will consider reducing its scope to that
+instead of killing it off completely.
+
+---
+
 Suggests workspace files and MarkDown file headers in MarkDown links.
 
 ![Screenshot](screenshot.gif)
